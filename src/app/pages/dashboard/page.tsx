@@ -1,0 +1,264 @@
+'use client';
+
+import * as React from 'react';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Button from '@mui/material/Button';
+import Link from 'next/link';
+import Navbar from '@/app/components/navbar';
+import { styled } from '@mui/system';
+
+// Иконки для кнопок
+import InventoryIcon from '@mui/icons-material/Inventory';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { useState } from 'react';
+import IssueInstrumentModal from '@/app/components/modalOkna/IssueInstrumentModal';
+import { Instrument } from '@prisma/client';
+import axios from 'axios';
+import WriteOffInstrumentModal from '@/app/components/modalOkna/WriteOffInstrumentModal';
+import ReturnInstrumentModal from '@/app/components/modalOkna/ReturnInstrumentModal';
+
+// Тестовые данные
+const testData = {
+  totalInstruments: 150,
+  issuedInstruments: 45,
+  returnedInstruments: 30,
+  writtenOffInstruments: 5,
+};
+
+// Основной цвет: глубокий синий (#1A73E8)
+const PrimaryGradientButton = styled(Button)(({ theme }) => ({
+  background: 'linear-gradient(45deg, #1A73E8 30%, #4285F4 90%)',
+  color: 'white',
+  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  height: '70px',
+  borderRadius: '10px',
+  boxShadow: '0 3px 5px 2px rgba(26, 115, 232, .3)',
+  transition: 'transform 0.2s, box-shadow 0.2s',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: '0 5px 7px 3px rgba(26, 115, 232, .4)',
+  },
+  [theme.breakpoints.up('sm')]: {
+    width: '200px', // На планшетах и ПК фиксированная ширина
+  },
+}));
+
+// Вторичный цвет: серый (#5F6368)
+const SecondaryGradientButton = styled(Button)(({ theme }) => ({
+  background: 'linear-gradient(45deg, #5F6368 30%, #80868B 90%)',
+  color: 'white',
+  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  height: '70px',
+  borderRadius: '10px',
+  boxShadow: '0 3px 5px 2px rgba(95, 99, 104, .3)',
+  transition: 'transform 0.2s, box-shadow 0.2s',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: '0 5px 7px 3px rgba(95, 99, 104, .4)',
+  },
+  [theme.breakpoints.up('sm')]: {
+    width: '200px', // На планшетах и ПК фиксированная ширина
+  },
+}));
+
+// Цвет ошибки: красный (#EA4335)
+const ErrorGradientButton = styled(Button)(({ theme }) => ({
+  background: 'linear-gradient(45deg, #EA4335 30%, #FBBC05 90%)',
+  color: 'white',
+  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  height: '70px',
+  borderRadius: '10px',
+  boxShadow: '0 3px 5px 2px rgba(234, 67, 53, .3)',
+  transition: 'transform 0.2s, box-shadow 0.2s',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: '0 5px 7px 3px rgba(234, 67, 53, .4)',
+  },
+  [theme.breakpoints.up('sm')]: {
+    width: '200px', // На планшетах и ПК фиксированная ширина
+  },
+}));
+
+export default function Home() {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleOpenModal = () => setModalOpen(true);
+  const handleCloseModal = () => setModalOpen(false);
+
+  const [writeOffModalOpen, setWriteOffModalOpen] = useState(false);
+
+  const handleOpenWriteOffModal = () => setWriteOffModalOpen(true);
+  const handleCloseWriteOffModal = () => setWriteOffModalOpen(false);
+
+  const [returnInstrumentModalOpen, setReturnInstrumentModalOpen] = useState(false);
+
+  const handleOpenReturnInstrumentModalModal = () => setReturnInstrumentModalOpen(true);
+  const handleCloseReturnInstrumentModalModal = () => setReturnInstrumentModalOpen(false);
+
+  return (
+    <div>
+      <Navbar />
+
+      <Box sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, backgroundColor: '#F5F5F5', minHeight: '100vh' }}>
+        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4, fontWeight: 'bold', color: '#1A73E8', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+          Главная страница
+        </Typography>
+
+        {/* Кнопки для операций */}
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' }, // На мобильных устройствах вертикально, на планшетах и ПК горизонтально
+            justifyContent: 'center',
+            gap: 2,
+            mb: 6,
+            width: '100%',
+            maxWidth: '800px',
+            mx: 'auto', // Центрирование кнопок
+          }}
+        >
+          <PrimaryGradientButton
+            variant="contained"
+            onClick={handleOpenModal}
+            startIcon={<InventoryIcon />}
+          >
+            Выдать/принять инструмент
+          </PrimaryGradientButton>
+
+          <SecondaryGradientButton
+            variant="contained"
+            onClick={handleOpenReturnInstrumentModalModal}
+            startIcon={<AddCircleOutlineIcon />}
+          >
+            Поступление нового инструмента
+          </SecondaryGradientButton>
+
+          <ErrorGradientButton
+            variant="contained"
+            onClick={handleOpenWriteOffModal}
+            startIcon={<DeleteOutlineIcon />}
+          >
+            Списать инструмент
+          </ErrorGradientButton>
+        </Box>
+
+        {/* Карточки с показателями */}
+        <Grid container spacing={3} justifyContent="center" sx={{ maxWidth: '1200px', mx: 'auto', p: { xs: 1, sm: 2 } }}>
+          {/* Карточка: Общее количество инструментов */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                height: '100%',
+                borderRadius: '10px',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                backgroundColor: '#FFFFFF',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+                },
+              }}
+            >
+              <CardContent>
+                <Typography variant="h6" component="div" gutterBottom align="center" sx={{ color: '#5F6368', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  Общее количество
+                </Typography>
+                <Typography variant="h4" color="primary" align="center" sx={{ fontWeight: 'bold', color: '#1A73E8', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                  {testData.totalInstruments}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Карточка: Выдано инструментов */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                height: '100%',
+                borderRadius: '10px',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                backgroundColor: '#FFFFFF',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+                },
+              }}
+            >
+              <CardContent>
+                <Typography variant="h6" component="div" gutterBottom align="center" sx={{ color: '#5F6368', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  Выдано
+                </Typography>
+                <Typography variant="h4" color="secondary" align="center" sx={{ fontWeight: 'bold', color: '#1A73E8', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                  {testData.issuedInstruments}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Карточка: Возвращено инструментов */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                height: '100%',
+                borderRadius: '10px',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                backgroundColor: '#FFFFFF',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+                },
+              }}
+            >
+              <CardContent>
+                <Typography variant="h6" component="div" gutterBottom align="center" sx={{ color: '#5F6368', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  Возвращено
+                </Typography>
+                <Typography variant="h4" color="success.main" align="center" sx={{ fontWeight: 'bold', color: '#34A853', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                  {testData.returnedInstruments}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Карточка: Списано инструментов */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                height: '100%',
+                borderRadius: '10px',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                backgroundColor: '#FFFFFF',
+                '&:hover': {
+                  transform: 'translateY(-5px)',
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+                },
+              }}
+            >
+              <CardContent>
+                <Typography variant="h6" component="div" gutterBottom align="center" sx={{ color: '#5F6368', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  Списано
+                </Typography>
+                <Typography variant="h4" color="error.main" align="center" sx={{ fontWeight: 'bold', color: '#EA4335', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                  {testData.writtenOffInstruments}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Box>
+
+
+      <IssueInstrumentModal open={modalOpen} handleClose={handleCloseModal} />
+      <WriteOffInstrumentModal open={writeOffModalOpen} handleClose={handleCloseWriteOffModal} />
+      <ReturnInstrumentModal open={returnInstrumentModalOpen} handleClose={handleCloseReturnInstrumentModalModal} />
+    </div>
+  );
+}

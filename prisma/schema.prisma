@@ -1,0 +1,162 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int     @id @default(autoincrement())
+  firstName String?
+  lastName  String?
+  login     String  @unique
+  password  String
+  roleId    Int
+  role      Role   @relation(fields: [roleId], references: [id])
+  logging Logging[]
+  transactions   InstrumentTransaction[] // Связь с операциями
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+}
+
+model Instrument {
+  id             Int                 @id @default(autoincrement())
+  name           String
+  type           String
+  quantity       Int
+  drawingId      Int?
+  drawing        Drawing?            @relation(fields: [drawingId], references: [id] , onDelete: Cascade)
+  machines       MachineInstrument[] 
+  toolCell       ToolCell[]
+  transactions   InstrumentTransaction[] // Связь с операциями
+}
+
+model Drawing {
+  id         Int          @id @default(autoincrement())
+  name       String
+  filePath   String?      // Путь к PDF-файлу
+  instrument Instrument[]
+}
+
+model Section {
+  id       Int       @id @default(autoincrement())
+  name     String
+  machines Machine[]
+  transactions   InstrumentTransaction[] // Связь с операциями
+}
+
+model Machine {
+  id         Int                 @id @default(autoincrement())
+  name       String
+  type       String?
+  product    MachineProduct[] 
+  instrument MachineInstrument[]
+  sectionId  Int?
+  section    Section?        @relation(fields: [sectionId], references: [id])
+  transactions   InstrumentTransaction[] // Связь с операциями
+}
+
+model MachineInstrument {
+  id           Int        @id @default(autoincrement())
+  machineId    Int
+  instrumentId Int
+  machine      Machine    @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id      Int              @id @default(autoincrement())
+  name    String
+  machine MachineProduct[]
+}
+
+model MachineProduct {
+  id        Int     @id @default(autoincrement())
+  machineId Int
+  productId Int
+  machine   Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model StorageCells {
+  id         Int          @id @default(autoincrement())
+  name       String
+  toolCell ToolCell[]
+}
+
+model ToolCell {
+  id          Int    @id @default(autoincrement())
+  instrumentId      Int
+  storageCellsId      Int
+  quantity    Int
+  instrument        Instrument   @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  storageCells        StorageCells   @relation(fields: [storageCellsId], references: [id], onDelete: Cascade)
+
+  @@unique([instrumentId, storageCellsId])
+}
+
+model Logging {
+  id        Int      @id @default(autoincrement())
+  action    String
+  tableName String
+  recordId  Int
+  oldData   Json?
+  newData   Json?
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  description String?
+  createdAt DateTime @default(now())
+
+  @@index([tableName, recordId])
+}
+
+model InstrumentTransaction {
+  id           Int        @id @default(autoincrement())
+  instrumentId Int        // Ссылка на инструмент
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  type         String     // Тип операции: "issue" (выдача), "return" (возврат), "write_off" (списание), "receipt" (приход)
+  quantity     Int        // Количество инструментов
+  status       String?    // Статус инструмента: "new" (новый), "used" (использованный)
+  issuedTo     String?    // Кому выдается инструмент (имя и фамилия, вводится вручную)
+  sectionId    Int?       // Ссылка на участок (если инструмент выдается на участок)
+  section      Section?   @relation(fields: [sectionId], references: [id])
+  machineId    Int?       // Ссылка на станок (если инструмент выдается на станок)
+  machine      Machine?   @relation(fields: [machineId], references: [id])
+  userId       Int?       // Ссылка на пользователя, который выполнил операцию
+  user         User?      @relation(fields: [userId], references: [id])
+  reason       String?    // Причина списания
+  transactionType String // "section" или "machine"
+  createdAt    DateTime   @default(now()) // Дата и время операции
+}
+
+model InstrumentSummary {
+  id           Int    @id @default(autoincrement())
+  instrumentId Int    // Ссылка на инструмент
+  issuedTo     String? // Кому выдан инструмент (например, имя пользователя или участок)
+  sectionId    Int?   // Ссылка на участок (если инструмент выдан на участок)
+  machineId    Int?   // Ссылка на станок (если инструмент выдан на станок)
+  totalIssued  Int    @default(0) // Общее количество выданных инструментов
+  totalReturned Int   @default(0) // Общее количество возвращённых инструментов
+
+  @@unique([instrumentId, sectionId, machineId]) // Уникальный ключ
+}
+model InstrumentSummaryWriteOffRepair {
+  id           Int    @id @default(autoincrement())
+  instrumentId Int    // Ссылка на инструмент
+  totalWrittenOff Int @default(0) // Общее количество списанных инструментов
+  totalRemont Int @default(0) // Общее количество  инструментов ремонте
+
+  @@unique([instrumentId]) // Уникальный ключ
+}
