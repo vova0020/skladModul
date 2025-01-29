@@ -34,7 +34,6 @@ model Role {
 model Instrument {
   id             Int                 @id @default(autoincrement())
   name           String
-  type           String
   quantity       Int
   drawingId      Int?
   drawing        Drawing?            @relation(fields: [drawingId], references: [id] , onDelete: Cascade)
@@ -50,12 +49,6 @@ model Drawing {
   instrument Instrument[]
 }
 
-model Section {
-  id       Int       @id @default(autoincrement())
-  name     String
-  machines Machine[]
-  transactions   InstrumentTransaction[] // Связь с операциями
-}
 
 model Machine {
   id         Int                 @id @default(autoincrement())
@@ -64,7 +57,6 @@ model Machine {
   product    MachineProduct[] 
   instrument MachineInstrument[]
   sectionId  Int?
-  section    Section?        @relation(fields: [sectionId], references: [id])
   transactions   InstrumentTransaction[] // Связь с операциями
 }
 
@@ -131,7 +123,7 @@ model InstrumentTransaction {
   status       String?    // Статус инструмента: "new" (новый), "used" (использованный)
   issuedTo     String?    // Кому выдается инструмент (имя и фамилия, вводится вручную)
   sectionId    Int?       // Ссылка на участок (если инструмент выдается на участок)
-  section      Section?   @relation(fields: [sectionId], references: [id])
+
   machineId    Int?       // Ссылка на станок (если инструмент выдается на станок)
   machine      Machine?   @relation(fields: [machineId], references: [id])
   userId       Int?       // Ссылка на пользователя, который выполнил операцию
@@ -145,18 +137,19 @@ model InstrumentSummary {
   id           Int    @id @default(autoincrement())
   instrumentId Int    // Ссылка на инструмент
   issuedTo     String? // Кому выдан инструмент (например, имя пользователя или участок)
-  sectionId    Int?   // Ссылка на участок (если инструмент выдан на участок)
-  machineId    Int?   // Ссылка на станок (если инструмент выдан на станок)
-  totalIssued  Int    @default(0) // Общее количество выданных инструментов
-  totalReturned Int   @default(0) // Общее количество возвращённых инструментов
 
-  @@unique([instrumentId, sectionId, machineId]) // Уникальный ключ
+  machineId    Int?   // Ссылка на станок (если инструмент выдан на станок)
+  totalIssued  Int    @default(0) // Общее количество выданных инструментов на станок
+
+
+  @@unique([instrumentId, machineId]) // Уникальный ключ
 }
 model InstrumentSummaryWriteOffRepair {
   id           Int    @id @default(autoincrement())
   instrumentId Int    // Ссылка на инструмент
+  totalIssuedCeh  Int    @default(0) // Общее количество выданных инструментов в цех
   totalWrittenOff Int @default(0) // Общее количество списанных инструментов
-  totalRemont Int @default(0) // Общее количество  инструментов ремонте
+  totalReturnedInWrittenOff Int   @default(0) // Общее количество возвращённых инструментов на списание
 
   @@unique([instrumentId]) // Уникальный ключ
 }

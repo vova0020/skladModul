@@ -14,7 +14,6 @@ import {
     DialogTitle,
     DialogActions,
     DialogContent,
-    MenuItem,
     Checkbox,
     Autocomplete,
 } from '@mui/material';
@@ -27,28 +26,18 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import axios from 'axios';
 import { ruRU } from '@mui/x-data-grid/locales/ruRU';
 
-type Sector = {
-    id: number;
-    name: string;
-    section?: { name: string };
-    sectionId?: number;
-    product?: { id: number; name: string }[];
-};
-
 type Product = {
     id: number;
     name: string;
 };
 
 export default function CreateSectors() {
-    const [stanock, setStanock] = useState<Sector[]>([]);
-    const [sectors, setSectors] = useState<Sector[]>([]);
+    const [stanock, setStanock] = useState<any[]>([]);
     const [product, setProduct] = useState<Product[]>([]);
-    const [selectedSector, setSelectedSector] = useState<Sector | null>(null);
+    const [selectedSector, setSelectedSector] = useState<any | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [dialogAction, setDialogAction] = useState<'add' | 'edit' | null>(null);
     const [sectorName, setSectorName] = useState('');
-    const [selectSector, setSelectSector] = useState<number | ''>('');
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -68,11 +57,7 @@ export default function CreateSectors() {
     const getSectors = async () => {
         try {
             const response = await axios.get('/api/adminka/updateStanock');
-            setStanock(response.data.sort((a: Sector, b: Sector) => a.id - b.id));
-            // console.log(response);
-
-            const response2 = await axios.get('/api/adminka/updateSector');
-            setSectors(response2.data.sort((a, b) => a.id - b.id));
+            setStanock(response.data.sort((a: any, b: any) => a.id - b.id));
 
             const response3 = await axios.get('/api/adminka/updateProduct');
             setProduct(response3.data.sort((a, b) => a.id - b.id));
@@ -88,14 +73,13 @@ export default function CreateSectors() {
     const handleDialogClose = () => {
         setOpenDialog(false);
         setSectorName('');
-        setSelectSector('');
         setSelectedProducts([]);
         setDialogAction(null);
     };
 
     const handleAddSector = async () => {
-        if (!sectorName.trim() || !selectSector || selectedProducts.length === 0) {
-            showSnackbar('Название, участок и изделия не могут быть пустыми.', 'error');
+        if (!sectorName.trim() || selectedProducts.length === 0) {
+            showSnackbar('Название и изделия не могут быть пустыми.', 'error');
             return;
         }
 
@@ -103,7 +87,6 @@ export default function CreateSectors() {
             await axios.post('/api/adminka/updateStanock', {
                 name: sectorName,
                 productId: selectedProducts,
-                sectionId: selectSector,
             });
             showSnackbar('Станок успешно добавлен!', 'success');
             getSectors();
@@ -120,7 +103,6 @@ export default function CreateSectors() {
                 stanockId: selectedSector.id,
                 name: sectorName,
                 productId: selectedProducts,
-                sectionId: selectSector,
             });
             showSnackbar('Станок успешно обновлён!', 'success');
             getSectors();
@@ -144,18 +126,12 @@ export default function CreateSectors() {
         { field: 'id', headerName: 'ID', width: 20 },
         { field: 'name', headerName: 'Название', width: 150 },
         {
-            field: 'sectionName',
-            headerName: 'Связь с участком',
-            width: 150,
-            renderCell: (params) => params.row?.section?.name || 'Без участка',
-        },
-        {
             field: 'productName',
             headerName: 'Связь с изделиями',
             width: 150,
             renderCell: (params) => {
                 if (params.row.product && params.row.product.length > 0) {
-                    return params.row.product.map(p => p.product.name).join(', ');
+                    return params.row.product.map((p: any) => p.product.name).join(', ');
                 } else {
                     return 'Без изделий';
                 }
@@ -172,9 +148,7 @@ export default function CreateSectors() {
                             setSelectedSector(params.row);
                             setDialogAction('edit');
                             setSectorName(params.row.name);
-                            setSelectSector(params.row.sectionId || '');
-                            // Устанавливаем выбранные изделия
-                            setSelectedProducts(params.row.product?.map(p => p.id) || []);
+                            setSelectedProducts(params.row.product?.map((p: any) => p.id) || []);
                             setOpenDialog(true);
                         }}
                     >
@@ -231,21 +205,6 @@ export default function CreateSectors() {
                         onChange={(e) => setSectorName(e.target.value)}
                         sx={{ mt: 2 }}
                     />
-                    <TextField
-                        select
-                        label="Участок"
-                        variant="outlined"
-                        fullWidth
-                        value={selectSector}
-                        onChange={(e) => setSelectSector(Number(e.target.value))}
-                        sx={{ mt: 2 }}
-                    >
-                        {sectors.map((sector) => (
-                            <MenuItem key={sector.id} value={sector.id}>
-                                {sector.name}
-                            </MenuItem>
-                        ))}
-                    </TextField>
                     <Autocomplete
                         multiple
                         options={product}

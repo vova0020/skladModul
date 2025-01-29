@@ -155,7 +155,7 @@ export default function CreateUsers() {
     ];
 
     return (
-        <div style={{ minHeight: '100vh', overflowY: 'auto' }}>
+        <div style={{ minHeight: '50vh', overflowY: 'auto' }}>
             <Box sx={{ height: '97%', p: 4, backgroundColor: '#fff', borderRadius: 2, boxShadow: 2 }}>
                 <Typography variant="h5" gutterBottom>
                     Управление пользователями

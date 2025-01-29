@@ -46,6 +46,14 @@ interface Instrument {
     toolCell: ToolCell[]; // Связь с ячейками хранения
 }
 
+interface QuarantineCell {
+    id: number;
+    instrumentId: number;
+    totalIssuedCeh: number;
+    totalReturnedInWrittenOff: number;
+    totalWrittenOff: number;
+}
+
 const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalProps) => {
     const [token, setToken] = React.useState<string | null>(null); // Токен пользователя
     const [userId, setUserId] = React.useState<number | null>(null); // Идентификатор пользователя
@@ -56,6 +64,7 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
     const [instruments, setInstruments] = React.useState<Instrument[]>([]);
     const [selectedInstrument, setSelectedInstrument] = React.useState<Instrument | null>(null);
     const [operationType, setOperationType] = React.useState<'write_off' | 'repair'>('write_off'); // Тип операции
+    const [quarantineCell, setQuarantineCell] = React.useState<QuarantineCell | null>(null); // Ячейка "Карантин"
 
     React.useEffect(() => {
         const storedToken = localStorage.getItem('token');
@@ -73,6 +82,8 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
     React.useEffect(() => {
         if (open) {
             fetchInstruments();
+            // Загружаем данные для ячейки "Карантин" (пример)
+            fetchQuarantineCell();
         } else {
             // Сбрасываем Snackbar при закрытии модального окна
             setSnackbar({ open: false, message: '', severity: 'success' });
@@ -87,6 +98,26 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
             console.error('Ошибка при загрузке инструментов:', error);
         }
     };
+
+    // Загрузка данных для ячейки "Карантин"
+    const fetchQuarantineCell = async () => {
+        try {
+            const response = await axios.get('/api/quarantineCell');
+            const quarantineData = response.data;
+            if (selectedInstrument) {
+                const filteredQuarantineCell = quarantineData.find((cell: QuarantineCell) => cell.instrumentId === selectedInstrument.id);
+                setQuarantineCell(filteredQuarantineCell || null);
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке ячейки "Карантин":', error);
+        }
+    };
+
+    React.useEffect(() => {
+        if (selectedInstrument) {
+            fetchQuarantineCell();
+        }
+    }, [selectedInstrument]);
 
     const handleCellSelection = (cellId: number, quantity: number | '') => {
         const cell = selectedInstrument?.toolCell.find((tc) => tc.storageCellsId === cellId);
@@ -120,7 +151,7 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
     };
 
     const handleSubmit = async () => {
-        if (selectedCells.length === 0 || !reason.trim() || !selectedInstrument) {
+        if ((selectedCells.length === 0 || !reason.trim() || !selectedInstrument) && operationType === 'write_off') {
             setSnackbar({ open: true, message: 'Необходимо выбрать ячейки, инструмент и указать причину.', severity: 'error' });
             return;
         }
@@ -136,7 +167,7 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
                 reason,
                 operationType, // Добавляем тип операции в запрос
             });
-            setSnackbar({ open: true, message: `Инструмент успешно ${operationType === 'write_off' ? 'списан' : 'сдан в ремонт'}!`, severity: 'success' });
+            setSnackbar({ open: true, message: `Инструмент успешно ${operationType === 'write_off' ? 'списан со склада' : 'списан, подготовленный к списанию'}!`, severity: 'success' });
             resetForm(); // Сбрасываем состояние формы
 
             // Задержка перед закрытием модального окна
@@ -144,13 +175,13 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
                 handleClose(true); // Передаем true для обновления данных в родительском компоненте
             }, 2000); // Закрываем через 2 секунды
         } catch (error) {
-            setSnackbar({ open: true, message: `Ошибка при ${operationType === 'write_off' ? 'списании' : 'сдаче в ремонт'} инструмента.`, severity: 'error' });
+            setSnackbar({ open: true, message: `Ошибка при ${operationType === 'write_off' ? 'списании со склада' : 'списании, подготовленного к списанию'} инструмента.`, severity: 'error' });
         }
     };
 
     return (
         <Dialog open={open} onClose={() => handleClose()} maxWidth="md" fullWidth>
-            <DialogTitle>{operationType === 'write_off' ? 'Списание инструмента' : 'Сдача инструмента в ремонт'}</DialogTitle>
+            <DialogTitle>{operationType === 'write_off' ? 'Списание инструмента со склада' : 'Списание инструмента, подготовленного к списанию'}</DialogTitle>
             <DialogContent>
                 <FormControl component="fieldset" sx={{ mt: 2 }}>
                     <FormLabel component="legend">Тип операции</FormLabel>
@@ -159,8 +190,8 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
                         value={operationType}
                         onChange={(e) => setOperationType(e.target.value as 'write_off' | 'repair')}
                     >
-                        <FormControlLabel value="write_off" control={<Radio />} label="Списание" />
-                        <FormControlLabel value="repair" control={<Radio />} label="Сдача в ремонт" />
+                        <FormControlLabel value="write_off" control={<Radio />} label="Списание со склада" />
+                        <FormControlLabel value="repair" control={<Radio />} label="Списать инструмент, подготовленный к списанию" />
                     </RadioGroup>
                 </FormControl>
                 <Autocomplete
@@ -176,37 +207,77 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
                         <Typography variant="h6" sx={{ mt: 2 }}>
                             {selectedInstrument.name}
                         </Typography>
-                        {selectedInstrument.toolCell.map((cell) => (
-                            <Box key={cell.storageCellsId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Typography variant="body1">
-                                    {cell.storageCells.name} (Доступно: {cell.quantity})
-                                </Typography>
-                                <TextField
-                                    label={`Количество для ${operationType === 'write_off' ? 'списания' : 'сдачи в ремонт'}`}
-                                    variant="outlined"
-                                    type="number"
-                                    value={quantities[cell.storageCellsId] ?? ''} // Используем пустую строку вместо 0
-                                    onChange={(e) => {
-                                        const value = e.target.value === '' ? '' : Number(e.target.value);
-                                        handleCellSelection(cell.storageCellsId, value);
-                                    }}
-                                    inputProps={{
-                                        min: 0,
-                                        max: cell.quantity, // Ограничение на максимальное значение
-                                    }}
-                                    error={
-                                        quantities[cell.storageCellsId] !== '' &&
-                                        (quantities[cell.storageCellsId] ?? 0) > cell.quantity
-                                    } // Показываем ошибку, если значение превышает доступное количество
-                                    helperText={
-                                        quantities[cell.storageCellsId] !== '' &&
-                                        (quantities[cell.storageCellsId] ?? 0) > cell.quantity
-                                            ? `Максимальное количество: ${cell.quantity}`
-                                            : ''
-                                    }
-                                />
-                            </Box>
-                        ))}
+                        {operationType === 'write_off' ? (
+                            // Отображаем все ячейки для списания со склада
+                            selectedInstrument.toolCell.map((cell) => (
+                                <Box key={cell.storageCellsId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Typography variant="body1">
+                                        {cell.storageCells.name} (Доступно: {cell.quantity})
+                                    </Typography>
+                                    <TextField
+                                        label="Количество для списания со склада"
+                                        variant="outlined"
+                                        type="number"
+                                        value={quantities[cell.storageCellsId] ?? ''}
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? '' : Number(e.target.value);
+                                            handleCellSelection(cell.storageCellsId, value);
+                                        }}
+                                        inputProps={{
+                                            min: 0,
+                                            max: cell.quantity,
+                                        }}
+                                        error={
+                                            quantities[cell.storageCellsId] !== '' &&
+                                            (quantities[cell.storageCellsId] ?? 0) > cell.quantity
+                                        }
+                                        helperText={
+                                            quantities[cell.storageCellsId] !== '' &&
+                                            (quantities[cell.storageCellsId] ?? 0) > cell.quantity
+                                                ? `Максимальное количество: ${cell.quantity}`
+                                                : ''
+                                        }
+                                    />
+                                </Box>
+                            ))
+                        ) : (
+                            // Отображаем только ячейку "Карантин" для списания, подготовленного к списанию
+                            quarantineCell && (
+                                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Typography variant="body1">
+                                        Карантин (Доступно для списания: {quarantineCell.totalReturnedInWrittenOff})
+                                    </Typography>
+                                    <TextField
+                                        label="Количество для списания"
+                                        variant="outlined"
+                                        type="number"
+                                        value={quantities[quarantineCell.id] ?? ''}
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? '' : Number(e.target.value);
+                                            handleCellSelection(quarantineCell.id, value);
+                                        }}
+                                        inputProps={{
+                                            min: 0,
+                                            max: quarantineCell.totalReturnedInWrittenOff,
+                                        }}
+                                        error={
+                                            quantities[quarantineCell.id] !== '' &&
+                                            (quantities[quarantineCell.id] ?? 0) > quarantineCell.totalReturnedInWrittenOff
+                                        }
+                                        helperText={
+                                            quantities[quarantineCell.id] !== '' &&
+                                            (quantities[quarantineCell.id] ?? 0) > quarantineCell.totalReturnedInWrittenOff
+                                                ? `Максимальное количество: ${quarantineCell.totalReturnedInWrittenOff}`
+                                                : ''
+                                        }
+                                        sx={{
+                                            width: '15%', // Увеличиваем ширину поля
+                                            
+                                        }}
+                                    />
+                                </Box>
+                            )
+                        )}
                     </>
                 )}
                 <TextField
@@ -221,12 +292,12 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
             <DialogActions>
                 <Button sx={{ mr: 5 }} onClick={() => handleClose()}>Отмена</Button>
                 <Button onClick={handleSubmit} variant="contained">
-                    {operationType === 'write_off' ? 'Списать' : 'Сдать в ремонт'}
+                    {operationType === 'write_off' ? 'Списать со склада' : 'Списать'}
                 </Button>
             </DialogActions>
             <Snackbar
                 open={snackbar.open}
-                autoHideDuration={3000} // Уменьшено время отображения до 3 секунд
+                autoHideDuration={3000}
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
             >
                 <Alert

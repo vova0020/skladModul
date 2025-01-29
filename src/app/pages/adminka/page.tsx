@@ -19,11 +19,8 @@ const AdminPage: React.FC = () => {
         <Navbar />
         <div style={{ width: '100%', padding: '10px' }}>
           <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
-            <div style={{ width: '49%', padding: '10px' }}>
+            <div style={{ width: '100%', padding: '10px' }}>
               <CreateUsers />
-            </div>
-            <div style={{ width: '49%', boxSizing: 'border-box', padding: '10px' }}>
-              <CreateSecktors />
             </div>
           </div>
           <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>

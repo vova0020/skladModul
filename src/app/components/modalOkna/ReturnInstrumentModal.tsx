@@ -43,7 +43,6 @@ interface ToolCell {
 interface Instrument {
     id: number;
     name: string;
-    type: string;
     quantity: number;
     toolCell: ToolCell[]; // Связь с ячейками хранения
 }
@@ -63,12 +62,11 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
     const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' });
     const [instruments, setInstruments] = React.useState<Instrument[]>([]);
     const [selectedInstrument, setSelectedInstrument] = React.useState<Instrument | null>(null);
-    const [operationType, setOperationType] = React.useState<'receive' | 'repairOff'>('receive'); // Тип операции
+    const [operationType, setOperationType] = React.useState<'receive' | 'receiveBalance'>('receive'); // Тип операции
     const [newSelectedCells, setNewSelectedCells] = React.useState<StorageCell[]>([]); // Новые ячейки, выбранные через Autocomplete
     const [selectedMachines, setSelectedMachines] = React.useState<number[]>([]); // Выбранные станки
     const [file, setFile] = React.useState<File | null>(null); // Файл чертежа
     const [instrumentName, setInstrumentName] = React.useState(''); // Название инструмента
-    const [instrumentType, setInstrumentType] = React.useState(''); // Тип инструмента
     const [instrumentQuantity, setInstrumentQuantity] = React.useState(0); // Общее количество инструмента
     const [quantityError, setQuantityError] = React.useState(''); // Ошибка превышения общего количества
 
@@ -132,7 +130,6 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
         setSelectedMachines([]); // Сбрасываем выбранные станки
         setFile(null); // Сбрасываем файл
         setInstrumentName(''); // Сбрасываем название
-        setInstrumentType(''); // Сбрасываем тип
         setInstrumentQuantity(0); // Сбрасываем количество
         setQuantityError(''); // Сбрасываем ошибку
     };
@@ -160,47 +157,45 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
             // Логика для получения инструмента
             if (
                 !instrumentName.trim() ||
-                !instrumentType.trim() ||
                 newSelectedCells.length === 0 ||
                 selectedMachines.length === 0
             ) {
-                setSnackbar({ open: true, message: 'Название, тип, ячейки хранения и станки не могут быть пустыми.', severity: 'error' });
+                setSnackbar({ open: true, message: 'Название, ячейки хранения и станки не могут быть пустыми.', severity: 'error' });
                 return;
             }
-    
+
             if (!validateQuantities()) {
                 return;
             }
-    
+
             const storageCellsData = newSelectedCells.map((cell) => ({
                 storageCellId: cell.id,
                 quantity: quantities[cell.id] || 0,
             }));
-    
+
             const machineIds = selectedMachines.filter((id) => id !== null && id !== undefined);
-    
+
             try {
                 const formData = new FormData();
                 formData.append('name', instrumentName);
                 formData.append('userId', userId);
-                formData.append('type', instrumentType);
                 formData.append('quantity', instrumentQuantity.toString());
                 formData.append('storageCellsData', JSON.stringify(storageCellsData));
                 formData.append('machineIds', JSON.stringify(machineIds));
-    
+
                 if (file) {
                     formData.append('file', file);
                 }
-    
+
                 const response = await axios.post('/api/updateCreateNewInstrument', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
                     },
                 });
-    
+
                 setSnackbar({ open: true, message: 'Инструмент успешно получен!', severity: 'success' });
                 resetForm(); // Сбрасываем состояние формы
-    
+
                 // Задержка перед закрытием модального окна
                 setTimeout(() => {
                     handleClose(true); // Передаем true для обновления данных в родительском компоненте
@@ -214,7 +209,7 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
                 setSnackbar({ open: true, message: 'Необходимо выбрать инструмент.', severity: 'error' });
                 return;
             }
-    
+
             // Собираем все ячейки: существующие и новые
             const allCells = [
                 ...(selectedInstrument.toolCell || []).map((cell) => ({
@@ -226,18 +221,18 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
                     quantity: quantities[cell.id] || 0,
                 })),
             ];
-    
+
             // Фильтруем ячейки, оставляя только те, для которых указано количество больше 0
             const filteredCells = allCells.filter((cell) => {
                 const quantity = quantities[cell.id];
                 return quantity !== '' && quantity > 0;
             });
-    
+
             if (filteredCells.length === 0) {
                 setSnackbar({ open: true, message: 'Необходимо указать количество хотя бы для одной ячейки.', severity: 'error' });
                 return;
             }
-    
+
             try {
                 const response = await axios.post('/api/updateRemontInstrument', {
                     instrumentId: selectedInstrument.id,
@@ -248,32 +243,32 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
                     })),
                     operationType,
                 });
-                setSnackbar({ open: true, message: 'Инструмент успешно возвращен из ремонта!', severity: 'success' });
+                setSnackbar({ open: true, message: 'Инструмент успешно добавлен в базу!', severity: 'success' });
                 resetForm(); // Сбрасываем состояние формы
-    
+
                 // Задержка перед закрытием модального окна
                 setTimeout(() => {
                     handleClose(true); // Передаем true для обновления данных в родительском компоненте
                 }, 2000); // Закрываем через 2 секунды
             } catch (error) {
-                setSnackbar({ open: true, message: 'Ошибка при возвращении инструмента из ремонта.', severity: 'error' });
+                setSnackbar({ open: true, message: 'Ошибка при добавлении инструмента в базу.', severity: 'error' });
             }
         }
     };
 
     return (
         <Dialog open={open} onClose={() => handleClose()} maxWidth="md" fullWidth>
-            <DialogTitle>{operationType === 'receive' ? 'Получение нового инструмента' : 'Возврат из ремонта'}</DialogTitle>
+            <DialogTitle>{operationType === 'receive' ? 'Новый инструмент без баланса' : 'Новый инструмент на балансе'}</DialogTitle>
             <DialogContent>
                 <FormControl component="fieldset" sx={{ mt: 2 }}>
                     <FormLabel component="legend">Тип операции</FormLabel>
                     <RadioGroup
                         row
                         value={operationType}
-                        onChange={(e) => setOperationType(e.target.value as 'receive' | 'repairOff')}
+                        onChange={(e) => setOperationType(e.target.value as 'receive' | 'receiveBalance')}
                     >
-                        <FormControlLabel value="receive" control={<Radio />} label="Получение" />
-                        <FormControlLabel value="repairOff" control={<Radio />} label="Возврат из ремонта" />
+                        <FormControlLabel value="receive" control={<Radio />} label="Новый инструмент без баланса" />
+                        <FormControlLabel value="receiveBalance" control={<Radio />} label="Новый инструмент на балансе" />
                     </RadioGroup>
                 </FormControl>
                 {operationType === 'receive' ? (
@@ -284,14 +279,6 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
                             fullWidth
                             value={instrumentName}
                             onChange={(e) => setInstrumentName(e.target.value)}
-                            sx={{ mt: 2 }}
-                        />
-                        <TextField
-                            label="Тип инструмента"
-                            variant="outlined"
-                            fullWidth
-                            value={instrumentType}
-                            onChange={(e) => setInstrumentType(e.target.value)}
                             sx={{ mt: 2 }}
                         />
                         <TextField
@@ -383,89 +370,89 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
                             sx={{ mt: 2 }}
                         />
                         {selectedInstrument && (
-    <>
-        <Typography variant="h6" sx={{ mt: 2 }}>
-            {selectedInstrument.name}
-        </Typography>
-        {selectedInstrument.toolCell.map((cell) => (
-            <Box key={cell.storageCellsId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant="body1">
-                    {cell.storageCells.name} (Доступно: {cell.quantity})
-                </Typography>
-                <TextField
-                    label={`Количество для ${operationType === 'receive' ? 'получения' : 'возврата из ремонта'}`}
-                    variant="outlined"
-                    type="number"
-                    value={quantities[cell.storageCellsId] ?? ''}
-                    onChange={(e) => {
-                        const value = e.target.value === '' ? '' : Number(e.target.value);
-                        handleCellSelection(cell.storageCellsId, value);
-                    }}
-                    inputProps={{
-                        min: 0,
-                        max: operationType === 'receive' ? cell.quantity : undefined, // Ограничение только для получения
-                    }}
-                    error={
-                        operationType === 'receive' && // Подсветка ошибки только для получения
-                        quantities[cell.storageCellsId] !== '' &&
-                        (quantities[cell.storageCellsId] ?? 0) > cell.quantity
-                    }
-                    helperText={
-                        operationType === 'receive' && // Сообщение об ошибке только для получения
-                        quantities[cell.storageCellsId] !== '' &&
-                        (quantities[cell.storageCellsId] ?? 0) > cell.quantity
-                            ? `Максимальное количество: ${cell.quantity}`
-                            : ''
-                    }
-                />
-            </Box>
-        ))}
-        {operationType === 'repairOff' && (
-            <>
-                <Autocomplete
-                    multiple
-                    options={storageCells}
-                    getOptionLabel={(option) => option.name}
-                    value={newSelectedCells}
-                    onChange={(event, newValue) => {
-                        setNewSelectedCells(newValue);
-                    }}
-                    renderInput={(params) => (
-                        <TextField {...params} label="Выберите ячейки для размещения" />
-                    )}
-                    sx={{ mt: 2 }}
-                />
-                {newSelectedCells.map((cell) => (
-                    <Box key={cell.id} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="body1">
-                            {cell.name}
-                        </Typography>
-                        <TextField
-                            label="Количество"
-                            variant="outlined"
-                            type="number"
-                            value={quantities[cell.id] ?? ''}
-                            onChange={(e) => {
-                                const value = e.target.value === '' ? '' : Number(e.target.value);
-                                setQuantities((prev) => ({ ...prev, [cell.id]: value }));
-                            }}
-                            inputProps={{
-                                min: 0,
-                            }}
-                        />
-                    </Box>
-                ))}
-            </>
-        )}
-    </>
-)}
+                            <>
+                                <Typography variant="h6" sx={{ mt: 2 }}>
+                                    {selectedInstrument.name}
+                                </Typography>
+                                {selectedInstrument.toolCell.map((cell) => (
+                                    <Box key={cell.storageCellsId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Typography variant="body1">
+                                            {cell.storageCells.name} (Доступно: {cell.quantity})
+                                        </Typography>
+                                        <TextField
+                                            label={`Количество для ${operationType === 'receive' ? 'получения' : 'возврата из ремонта'}`}
+                                            variant="outlined"
+                                            type="number"
+                                            value={quantities[cell.storageCellsId] ?? ''}
+                                            onChange={(e) => {
+                                                const value = e.target.value === '' ? '' : Number(e.target.value);
+                                                handleCellSelection(cell.storageCellsId, value);
+                                            }}
+                                            inputProps={{
+                                                min: 0,
+                                                max: operationType === 'receive' ? cell.quantity : undefined, // Ограничение только для получения
+                                            }}
+                                            error={
+                                                operationType === 'receive' && // Подсветка ошибки только для получения
+                                                quantities[cell.storageCellsId] !== '' &&
+                                                (quantities[cell.storageCellsId] ?? 0) > cell.quantity
+                                            }
+                                            helperText={
+                                                operationType === 'receive' && // Сообщение об ошибке только для получения
+                                                    quantities[cell.storageCellsId] !== '' &&
+                                                    (quantities[cell.storageCellsId] ?? 0) > cell.quantity
+                                                    ? `Максимальное количество: ${cell.quantity}`
+                                                    : ''
+                                            }
+                                        />
+                                    </Box>
+                                ))}
+                                {operationType === 'receiveBalance' && (
+                                    <>
+                                        <Autocomplete
+                                            multiple
+                                            options={storageCells}
+                                            getOptionLabel={(option) => option.name}
+                                            value={newSelectedCells}
+                                            onChange={(event, newValue) => {
+                                                setNewSelectedCells(newValue);
+                                            }}
+                                            renderInput={(params) => (
+                                                <TextField {...params} label="Выберите ячейки для размещения" />
+                                            )}
+                                            sx={{ mt: 2 }}
+                                        />
+                                        {newSelectedCells.map((cell) => (
+                                            <Box key={cell.id} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                <Typography variant="body1">
+                                                    {cell.name}
+                                                </Typography>
+                                                <TextField
+                                                    label="Количество"
+                                                    variant="outlined"
+                                                    type="number"
+                                                    value={quantities[cell.id] ?? ''}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value === '' ? '' : Number(e.target.value);
+                                                        setQuantities((prev) => ({ ...prev, [cell.id]: value }));
+                                                    }}
+                                                    inputProps={{
+                                                        min: 0,
+                                                    }}
+                                                />
+                                            </Box>
+                                        ))}
+                                    </>
+                                )}
+                            </>
+                        )}
                     </>
                 )}
             </DialogContent>
             <DialogActions>
                 <Button sx={{ mr: 5 }} onClick={() => handleClose()}>Отмена</Button>
                 <Button onClick={handleSubmit} variant="contained">
-                    {operationType === 'receive' ? 'Получить' : 'Вернуть из ремонта'}
+                    {operationType === 'receive' ? 'Сохранить' : 'Сохранить'}
                 </Button>
             </DialogActions>
             <Snackbar

@@ -55,14 +55,7 @@ export async function POST(req: NextRequest) {
       const data = await req.json(); // Парсинг тела запроса
       console.log(data);
 
-      // Проверяем, что данные присутствуют
-      if (!data || !data.instrumentId || !data.cells || !data.reason) {
-          console.log('Необходимо указать instrumentId, cells и reason.');
-          return NextResponse.json(
-              { message: 'Необходимо указать instrumentId, cells и reason.' },
-              { status: 400 }
-          );
-      }
+     
 
       // Создаем запись о списании инструмента
       const newTransaction = await prisma.createInstrumentTransactionSpisanie(data);

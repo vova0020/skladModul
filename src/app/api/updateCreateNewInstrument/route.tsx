@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
     try {
         const data = await req.formData(); // Используем FormData для работы с файлами
         const name = data.get('name') as string;
-        const type = data.get('type') as string;
         const userId = Number(data.get('userId')); // Преобразуем userId в число
         const quantity = Number(data.get('quantity')); // Преобразуем quantity в число
         const storageCellsData = JSON.parse(data.get('storageCellsData') as string); // Массив объектов { storageCellId: number, quantity: number }
@@ -48,7 +47,6 @@ export async function POST(req: NextRequest) {
         // Создаем объект для передачи в Prisma
         const instrumentData = {
             name,
-            type,
             userId,
             quantity,
             storageCellsData, // Массив ячеек хранения и количеств

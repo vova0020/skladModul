@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest) {
         const data = await req.formData(); // Используем FormData для работы с файлами
         const instrumentId = data.get('instrumentId') as string;
         const name = data.get('name') as string;
-        const type = data.get('type') as string;
+  
         const storageCellsData = JSON.parse(data.get('storageCellsData') as string); // Массив объектов { storageCellId: number, quantity: number }
         const machineIds = JSON.parse(data.get('machineIds') as string) as number[];
         const file = data.get('file') as File | null;
@@ -64,7 +64,6 @@ export async function PUT(req: NextRequest) {
         const updatedInstrument = await prisma.putAdminInstrument(
             parseInt(instrumentId),
             name,
-            type,
             storageCellsData,
             machineIds,
             fileData

@@ -17,37 +17,34 @@ const style = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: '90%', // На мобильных устройствах занимает 90% ширины экрана
-  maxWidth: 600, // Максимальная ширина на больших экранах
+  width: '90%',
+  maxWidth: 600,
   bgcolor: 'background.paper',
   boxShadow: 24,
-  p: { xs: 2, sm: 4 }, // Отступы адаптируются для мобильных устройств
+  p: { xs: 2, sm: 4 },
   borderRadius: '10px',
-  maxHeight: '90vh', // Ограничиваем высоту модального окна
-  overflowY: 'auto', // Добавляем прокрутку по вертикали
+  maxHeight: '90vh',
+  overflowY: 'auto',
 };
 
 const IssueInstrumentModal = ({ open, handleClose }) => {
-  const [token, setToken] = React.useState<string | null>(null); // Токен пользователя
-  const [userId, setUserId] = React.useState<number | null>(null); // Идентификатор пользователя
+  const [token, setToken] = React.useState<string | null>(null);
+  const [userId, setUserId] = React.useState<number | null>(null);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Определяем, используется ли мобильное устройство
-  const [operationType, setOperationType] = useState('issue'); // 'issue' или 'return'
-  const [section, setSection] = useState(null);
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [operationType, setOperationType] = useState('issue');
   const [machine, setMachine] = useState(null);
   const [instrument, setInstrument] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [issuedTo, setIssuedTo] = useState('');
-  const [instrumentStatus, setInstrumentStatus] = useState('new'); // 'new' или 'used'
+  const [instrumentStatus, setInstrumentStatus] = useState('new');
   const [summaryInstrument, setSummaryInstrument] = useState(null);
   const [storageCells, setStorageCells] = useState([]);
   const [selectedCells, setSelectedCells] = useState([]);
   const [totalSelected, setTotalSelected] = useState(0);
 
-  const [sections, setSections] = useState([]);
   const [machines, setMachines] = useState([]);
   const [instruments, setInstruments] = useState([]);
-
 
   React.useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -61,7 +58,7 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
       }
     }
   }, []);
-  // Загрузка данных при открытии модального окна
+
   useEffect(() => {
     if (open) {
       fetchData();
@@ -70,9 +67,6 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
 
   const fetchData = async () => {
     try {
-      const sectionsResponse = await axios.get('/api/adminka/updateSector');
-      setSections(sectionsResponse.data);
-
       const machinesResponse = await axios.get('/api/adminka/updateStanock');
       setMachines(machinesResponse.data);
 
@@ -84,17 +78,14 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
 
       const summaryInstruments = await axios.get('/api/getInstrumentSummary');
       setSummaryInstrument(summaryInstruments.data);
-      // console.log(summaryInstruments.data);
 
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
     }
   };
 
-  // Сброс всех полей формы
   const resetForm = () => {
     setOperationType('issue');
-    setSection(null);
     setMachine(null);
     setInstrument(null);
     setQuantity(1);
@@ -104,13 +95,25 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
     setTotalSelected(0);
   };
 
-  // Фильтрация ячеек хранения при выборе инструмента
+  useEffect(() => {
+    if (machine) {
+      // Фильтруем инструменты, проверяя, есть ли выбранный станок в массиве machines
+      const filteredInstruments = instruments.filter((instrument) =>
+        instrument.machines.some((m) => m.machineId === machine.id)
+      );
+      setInstruments(filteredInstruments);
+    } else {
+      // Если станок не выбран, показываем все инструменты
+      fetchData(); // или другой метод для загрузки всех инструментов
+    }
+  }, [machine]);
+
   useEffect(() => {
     if (instrument && storageCells) {
       const filteredCells = storageCells.filter((cell) =>
         cell.toolCell && cell.toolCell.some((tool) => tool.instrumentId === instrument.id)
       );
-      setSelectedCells(filteredCells.map((cell) => ({ id: cell.id, quantity: '' }))); // Разрешаем пустую строку
+      setSelectedCells(filteredCells.map((cell) => ({ id: cell.id, quantity: '' })));
       const foundSummary = summaryInstrument?.find((summary) => summary.instrumentId === instrument.id);
       setSummaryInstrument(foundSummary ? [foundSummary] : []);
     } else {
@@ -118,7 +121,6 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
     }
   }, [instrument, storageCells]);
 
-  // Обновление общего количества выбранных инструментов
   useEffect(() => {
     const total = selectedCells.reduce((sum, cell) => {
       const quantity = cell.quantity === '' ? 0 : parseInt(cell.quantity, 10);
@@ -127,9 +129,7 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
     setTotalSelected(total);
   }, [selectedCells]);
 
-  // Обработка изменения количества в ячейке
   const handleCellQuantityChange = (cellId, newValue) => {
-    // Если поле пустое, устанавливаем пустую строку
     if (newValue === '') {
       setSelectedCells((prev) =>
         prev.map((cell) => (cell.id === cellId ? { ...cell, quantity: '' } : cell))
@@ -137,41 +137,21 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
       return;
     }
 
-    // Преобразуем в число, если значение не пустое
     const numericValue = parseInt(newValue, 10);
     if (isNaN(numericValue) || numericValue < 0) return;
 
-    // Получаем доступное количество для инструмента в этой ячейке
     const storageCell = storageCells.find((sc) => sc.id === cellId);
     const toolCell = storageCell?.toolCell?.find((tool) => tool.instrumentId === instrument?.id);
     const availableInCell = toolCell?.quantity || 0;
 
-    // Ограничение на количество в ячейке
     if (operationType === 'issue' && numericValue > availableInCell) {
       alert(`Вы не можете взять больше, чем доступно в ячейке: ${availableInCell}`);
       return;
     }
 
-    // Ограничение на общее количество для операции "return"
-    if (operationType === 'return') {
-      const availableBalance = (summaryInstrument[0]?.totalIssued || 0) - (summaryInstrument[0]?.totalReturned || 0);
-
-      // Получаем текущее общее количество для всех ячеек
-      const currentTotal = selectedCells.reduce((sum, cell) => {
-        if (cell.id === cellId) {
-          return sum + (cell.quantity === '' ? 0 : parseInt(cell.quantity, 10));
-        } else {
-          return sum + (cell.quantity === '' ? 0 : parseInt(cell.quantity, 10));
-        }
-      }, 0);
-
-      // Вычисляем новое общее количество
-      const newTotal = currentTotal - (selectedCells.find((cell) => cell.id === cellId)?.quantity || 0) + numericValue;
-
-      if (newTotal > availableBalance) {
-        alert(`Вы не можете ввести количество больше, чем доступно: ${availableBalance}`);
-        return;
-      }
+    if (operationType === 'sendWriteOff' && numericValue > availableInCell) {
+      alert(`Вы не можете списать больше, чем доступно в ячейке: ${availableInCell}`);
+      return;
     }
 
     setSelectedCells((prev) =>
@@ -179,25 +159,23 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
     );
   };
 
-  // Обработка изменения количества в поле "Количество"
   const handleQuantityChange = (e) => {
     const newValue = e.target.value;
 
-    // Если поле пустое, устанавливаем пустую строку
     if (newValue === '') {
       setQuantity('');
       return;
     }
 
     const newQuantity = parseInt(newValue, 10);
+    console.log(newValue);
+
 
     if (isNaN(newQuantity) || newQuantity < 0) {
       return;
     }
 
-    // Ограничение на общее количество для операции "issue"
     if (operationType === 'issue') {
-      // Получаем доступное количество в выбранных ячейках
       const availableInCells = selectedCells.reduce((sum, cell) => {
         const storageCell = storageCells.find((sc) => sc.id === cell.id);
         const toolCell = storageCell?.toolCell?.find((tool) => tool.instrumentId === instrument?.id);
@@ -210,12 +188,15 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
       }
     }
 
-    // Ограничение на количество для операции "return"
-    if (operationType === 'return') {
-      const availableBalance = (summaryInstrument[0]?.totalIssued || 0) - (summaryInstrument[0]?.totalReturned || 0);
+    if (operationType === 'sendWriteOff') {
+      const availableInCells = selectedCells.reduce((sum, cell) => {
+        const storageCell = storageCells.find((sc) => sc.id === cell.id);
+        const toolCell = storageCell?.toolCell?.find((tool) => tool.instrumentId === instrument?.id);
+        return sum + (toolCell?.quantity || 0);
+      }, 0);
 
-      if (newQuantity > availableBalance) {
-        alert(`Вы не можете ввести количество больше, чем доступно: ${availableBalance}`);
+      if (newQuantity > availableInCells) {
+        alert(`Вы не можете списать больше, чем доступно в выбранных ячейках: ${availableInCells}`);
         return;
       }
     }
@@ -223,9 +204,7 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
     setQuantity(newQuantity);
   };
 
-  // Отправка данных на сервер
   const handleSubmit = async () => {
-    // Преобразуем пустые строки в 0
     const sanitizedCells = selectedCells.map((cell) => ({
       ...cell,
       quantity: cell.quantity === '' ? 0 : cell.quantity,
@@ -233,9 +212,7 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
 
     const totalSelected = sanitizedCells.reduce((sum, cell) => sum + cell.quantity, 0);
 
-    // Проверка на доступное количество для операции "issue"
     if (operationType === 'issue') {
-      // Получаем доступное количество в выбранных ячейках
       const availableInCells = selectedCells.reduce((sum, cell) => {
         const storageCell = storageCells.find((sc) => sc.id === cell.id);
         const toolCell = storageCell?.toolCell?.find((tool) => tool.instrumentId === instrument?.id);
@@ -248,16 +225,20 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
       }
     }
 
-    // Проверка на доступное количество для операции "return"
-    if (operationType === 'return') {
-      const availableBalance = (summaryInstrument[0]?.totalIssued || 0) - (summaryInstrument[0]?.totalReturned || 0);
-      if (totalSelected > availableBalance) {
-        alert(`Вы не можете вернуть больше, чем доступно: ${availableBalance}`);
+    if (operationType === 'sendWriteOff') {
+      const availableInCells = selectedCells.reduce((sum, cell) => {
+        const storageCell = storageCells.find((sc) => sc.id === cell.id);
+        const toolCell = storageCell?.toolCell?.find((tool) => tool.instrumentId === instrument?.id);
+        return sum + (toolCell?.quantity || 0);
+      }, 0);
+
+      if (totalSelected > availableInCells) {
+        alert(`Вы не можете списать больше, чем доступно в ячейках: ${availableInCells}`);
         return;
       }
     }
 
-    if (totalSelected !== quantity) {
+    if (totalSelected !== quantity && operationType !== 'returnedInWrittenOff') {
       alert(`Общее количество должно быть равно ${quantity}`);
       return;
     }
@@ -266,12 +247,11 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
       instrumentId: instrument.id,
       type: operationType,
       quantity,
-      status: operationType === 'issue' ? instrumentStatus : null, // Добавляем статус инструмента
+      status: operationType === 'issue' ? instrumentStatus : null,
       issuedTo: issuedTo,
-      sectionId: section?.id,
       machineId: machine?.id,
-      userId, // Замените на ID текущего пользователя
-      transactionType: machine ? 'machine' : 'section',
+      userId,
+      transactionType: 'machine',
       storageCells: sanitizedCells.filter((cell) => cell.quantity > 0),
     };
 
@@ -295,7 +275,10 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
     >
       <Box sx={style}>
         <Typography id="modal-modal-title" variant="h6" component="h2" sx={{ mb: 3, fontWeight: 'bold', color: '#1A73E8' }}>
-          {operationType === 'issue' ? 'Выдать инструмент' : 'Принять инструмент'}
+          {operationType === 'issue' ? 'Выдать инструмент' :
+            operationType === 'return' ? 'Возврат с участка на баланс' :
+              operationType === 'returnedInWrittenOff' ? 'Возврат неликвид на списание' :
+                'Отправить инструмент на списание'}
         </Typography>
 
         <Grid container spacing={2}>
@@ -309,34 +292,25 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
               size={isMobile ? 'small' : 'medium'}
             >
               <MenuItem value="issue">Выдать инструмент</MenuItem>
-              <MenuItem value="return">Принять инструмент</MenuItem>
+              <MenuItem value="return">Возврат с участка на баланс</MenuItem>
+              <MenuItem value="returnedInWrittenOff">Возврат неликвид на списание</MenuItem>
+              <MenuItem value="sendWriteOff">Отправить инструмент на списание</MenuItem>
             </TextField>
           </Grid>
 
-          <Grid item xs={12}>
-            <Autocomplete
-              options={sections}
-              getOptionLabel={(option) => option.name}
-              value={section}
-              onChange={(_, newValue) => setSection(newValue)}
-              renderInput={(params) => (
-                <TextField {...params} label="Участок" fullWidth size={isMobile ? 'small' : 'medium'} />
-              )}
-            />
-          </Grid>
-
-          <Grid item xs={12}>
-            <Autocomplete
-              options={machines.filter((m) => m.sectionId === section?.id)}
-              getOptionLabel={(option) => option.name}
-              value={machine}
-              onChange={(_, newValue) => setMachine(newValue)}
-              renderInput={(params) => (
-                <TextField {...params} label="Станок" fullWidth size={isMobile ? 'small' : 'medium'} />
-              )}
-              disabled={!section}
-            />
-          </Grid>
+          {operationType !== 'sendWriteOff' && (
+            <Grid item xs={12}>
+              <Autocomplete
+                options={machines}
+                getOptionLabel={(option) => option.name}
+                value={machine}
+                onChange={(_, newValue) => setMachine(newValue)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Станок" fullWidth size={isMobile ? 'small' : 'medium'} />
+                )}
+              />
+            </Grid>
+          )}
 
           <Grid item xs={12}>
             <Autocomplete
@@ -389,10 +363,12 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
             </>
           )}
 
-          {operationType === 'return' && (
+          {(operationType === 'return' || operationType === 'returnedInWrittenOff' || operationType === 'sendWriteOff') && (
             <Grid item xs={12}>
               <TextField
-                label="От кого принял инструмент"
+                label={operationType === 'return' ? "От кого принял инструмент" :
+                  operationType === 'returnedInWrittenOff' ? "От кого принят неликвид" :
+                    "От кого принят инструмент на списание"}
                 value={issuedTo}
                 onChange={(e) => setIssuedTo(e.target.value)}
                 fullWidth
@@ -401,69 +377,18 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
             </Grid>
           )}
 
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              {operationType === 'issue' ? 'Выберите ячейки для изъятия' : 'Выберите ячейки для возврата'}
-            </Typography>
+          {(operationType !== 'returnedInWrittenOff') && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                {operationType === 'issue' ? 'Выберите ячейки для изъятия' :
+                  operationType === 'return' ? 'Выберите ячейки для возврата на баланс' :
+                    'Выберите ячейки для списания'}
+              </Typography>
 
-            {operationType === 'issue' ? (
-              // Отображение ячеек для изъятия (как раньше)
-              selectedCells.map((cell) => {
-                const storageCell = storageCells.find((sc) => sc.id === cell.id);
-                const toolCell = storageCell?.toolCell?.find((tool) => tool.instrumentId === instrument?.id);
-
-                return (
-                  <Box key={cell.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <TextField
-                      label={storageCell?.name}
-                      type="number"
-                      value={cell.quantity}
-                      onChange={(e) => handleCellQuantityChange(cell.id, e.target.value)}
-                      inputProps={{ min: 0 }}
-                      sx={{ mr: 2, flexGrow: 1 }}
-                      size={isMobile ? 'small' : 'medium'}
-                    />
-                    <Typography variant="body2" sx={{ minWidth: '100px' }}>
-                      Доступно: {toolCell?.quantity || 0}
-                    </Typography>
-                  </Box>
-                );
-              })
-            ) : (
-              // Отображение ячеек для возврата
-              <>
-                {/* Автокомплит для добавления новых ячеек */}
-                <Autocomplete
-                  multiple
-                  options={storageCells.filter(
-                    (cell) =>
-                      !selectedCells.some((selected) => selected.id === cell.id) && // Исключаем уже выбранные ячейки
-                      !cell.toolCell?.some((tool) => tool.instrumentId === instrument?.id) // Исключаем ячейки с инструментом
-                  )}
-                  getOptionLabel={(option) => option.name}
-                  value={[]} // Пустое значение, так как мы только добавляем новые ячейки
-                  onChange={(event, newValue) => {
-                    // Добавляем новые ячейки в selectedCells
-                    const newCells = newValue.map((cell) => ({ id: cell.id, quantity: 0 }));
-                    setSelectedCells((prev) => [...prev, ...newCells]);
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Добавить ячейки для возврата"
-                      placeholder="Выберите ячейки"
-                    />
-                  )}
-                  sx={{ mb: 2 }}
-                />
-
-                {/* Список выбранных ячеек */}
-                {selectedCells.map((cell) => {
+              {operationType === 'issue' || operationType === 'sendWriteOff' ? (
+                selectedCells.map((cell) => {
                   const storageCell = storageCells.find((sc) => sc.id === cell.id);
                   const toolCell = storageCell?.toolCell?.find((tool) => tool.instrumentId === instrument?.id);
-
-                  // Проверяем, можно ли удалить ячейку (только если инструмента в ней нет)
-                  const canDelete = !toolCell;
 
                   return (
                     <Box key={cell.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -476,27 +401,75 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
                         sx={{ mr: 2, flexGrow: 1 }}
                         size={isMobile ? 'small' : 'medium'}
                       />
-                      <Typography variant="body2" sx={{ minWidth: '100px', mr: 2 }}>
+                      <Typography variant="body2" sx={{ minWidth: '100px' }}>
                         Доступно: {toolCell?.quantity || 0}
                       </Typography>
-                      {canDelete && (
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          onClick={() => {
-                            // Удаляем ячейку из selectedCells
-                            setSelectedCells((prev) => prev.filter((c) => c.id !== cell.id));
-                          }}
-                        >
-                          Удалить
-                        </Button>
-                      )}
                     </Box>
                   );
-                })}
-              </>
-            )}
-          </Grid>
+                })
+              ) : (
+                <>
+                  <Autocomplete
+                    multiple
+                    options={storageCells.filter(
+                      (cell) =>
+                        !selectedCells.some((selected) => selected.id === cell.id) &&
+                        !cell.toolCell?.some((tool) => tool.instrumentId === instrument?.id)
+                    )}
+                    getOptionLabel={(option) => option.name}
+                    value={[]}
+                    onChange={(event, newValue) => {
+                      const newCells = newValue.map((cell) => ({ id: cell.id, quantity: 0 }));
+                      setSelectedCells((prev) => [...prev, ...newCells]);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Добавить ячейки"
+                        placeholder="Выберите ячейки"
+                      />
+                    )}
+                    sx={{ mb: 2 }}
+                  />
+
+                  {selectedCells.map((cell) => {
+                    const storageCell = storageCells.find((sc) => sc.id === cell.id);
+                    const toolCell = storageCell?.toolCell?.find((tool) => tool.instrumentId === instrument?.id);
+                    const canDelete = !toolCell;
+
+                    return (
+                      <Box key={cell.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <TextField
+                          label={storageCell?.name}
+                          type="number"
+                          value={cell.quantity}
+                          onChange={(e) => handleCellQuantityChange(cell.id, e.target.value)}
+                          inputProps={{ min: 0 }}
+                          sx={{ mr: 2, flexGrow: 1 }}
+                          size={isMobile ? 'small' : 'medium'}
+                        />
+                        <Typography variant="body2" sx={{ minWidth: '100px', mr: 2 }}>
+                          Доступно: {toolCell?.quantity || 0}
+                        </Typography>
+                        {canDelete && (
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={() => {
+                              setSelectedCells((prev) => prev.filter((c) => c.id !== cell.id));
+                            }}
+                          >
+                            Удалить
+                          </Button>
+                        )}
+                      </Box>
+                    );
+                  })}
+                </>
+              )}
+            </Grid>
+          )}
+
 
           {operationType === 'issue' ? (
             <Grid item xs={12}>
@@ -507,7 +480,9 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
           ) : (
             <Grid item xs={12}>
               <Typography variant="body1" sx={{ mt: 2 }}>
-                Принять: {`${totalSelected} из  ${(summaryInstrument[0]?.totalIssued || 0) - (summaryInstrument[0]?.totalReturned || 0)}  `}
+                {operationType === 'return' ? 'Вернуть на баланс' :
+                  operationType === 'sendWriteOff' ? 'Отправить на списание' :
+                    'Отправить на списание'} {totalSelected} из {quantity || 0}
               </Typography>
             </Grid>
           )}
@@ -521,7 +496,10 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
             Отмена
           </Button>
           <Button variant="contained" onClick={handleSubmit} size={isMobile ? 'small' : 'medium'}>
-            {operationType === 'issue' ? 'Выдать' : 'Принять'}
+            {operationType === 'issue' ? 'Выдать' :
+              operationType === 'return' ? 'Вернуть на баланс' :
+                operationType === 'returnedInWrittenOff' ? 'Отправить на списание' :
+                  'Отправить на списание'}
           </Button>
         </Box>
       </Box>

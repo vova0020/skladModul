@@ -14,7 +14,6 @@ import {
     DialogTitle,
     DialogActions,
     DialogContent,
-    MenuItem,
     Checkbox,
     Autocomplete,
     Input,
@@ -31,7 +30,6 @@ import { ruRU } from '@mui/x-data-grid/locales/ruRU';
 type Instrument = {
     id: number;
     name: string;
-    type: string;
     quantity: number;
     drawing?: { id: number; name: string; filePath: string }; // Связь с чертежом
     toolCell?: { storageCells: { id: number; name: string }; quantity: number }[]; // Связь с ячейками хранения
@@ -62,7 +60,6 @@ export default function CreateInstrument() {
     const [dialogAction, setDialogAction] = useState<'add' | 'edit' | null>(null);
     const [instrumentName, setInstrumentName] = useState('');
     const [instrumentQanti, setInstrumentQanti] = useState(0);
-    const [instrumentType, setInstrumentType] = useState('');
     const [selectedStorageCells, setSelectedStorageCells] = useState<StorageCellSelection[]>([]);
     const [selectedMachines, setSelectedMachines] = useState<number[]>([]);
     const [file, setFile] = useState<File | null>(null);
@@ -104,7 +101,6 @@ export default function CreateInstrument() {
         setOpenDialog(false);
         setInstrumentName('');
         setInstrumentQanti(0);
-        setInstrumentType('');
         setSelectedStorageCells([]);
         setSelectedMachines([]);
         setFile(null);
@@ -120,11 +116,10 @@ export default function CreateInstrument() {
     const handleAddInstrument = async () => {
         if (
             !instrumentName.trim() ||
-            !instrumentType.trim() ||
             selectedStorageCells.length === 0 ||
             selectedMachines.length === 0
         ) {
-            showSnackbar('Название, тип, ячейки хранения и станки не могут быть пустыми.', 'error');
+            showSnackbar('Название, ячейки хранения и станки не могут быть пустыми.', 'error');
             return;
         }
 
@@ -138,7 +133,6 @@ export default function CreateInstrument() {
         try {
             const formData = new FormData();
             formData.append('name', instrumentName);
-            formData.append('type', instrumentType);
             formData.append('storageCellsData', JSON.stringify(storageCellsData));
             formData.append('machineIds', JSON.stringify(machineIds));
 
@@ -167,7 +161,6 @@ export default function CreateInstrument() {
             const formData = new FormData();
             formData.append('instrumentId', selectedInstrument.id.toString());
             formData.append('name', instrumentName);
-            formData.append('type', instrumentType);
             formData.append('storageCellsData', JSON.stringify(selectedStorageCells));
             formData.append('machineIds', JSON.stringify(selectedMachines));
             if (file) {
@@ -201,7 +194,6 @@ export default function CreateInstrument() {
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID', width: 20 },
         { field: 'name', headerName: 'Название', width: 150 },
-        { field: 'type', headerName: 'Тип', width: 150 },
         { field: 'quantity', headerName: 'Количество', width: 150 },
         {
             field: 'drawings',
@@ -249,7 +241,6 @@ export default function CreateInstrument() {
                             setDialogAction('edit');
                             setInstrumentName(params.row.name);
                             setInstrumentQanti(params.row.quantity);
-                            setInstrumentType(params.row.type);
                             setSelectedStorageCells(
                                 params.row.toolCell?.map((cell: any) => ({
                                     storageCellId: cell.storageCells.id,
@@ -311,19 +302,11 @@ export default function CreateInstrument() {
                         sx={{ mt: 2 }}
                     />
                     <TextField
-                        label="Тип инструмента"
-                        variant="outlined"
-                        fullWidth
-                        value={instrumentType}
-                        onChange={(e) => setInstrumentType(e.target.value)}
-                        sx={{ mt: 2 }}
-                    />
-                    <TextField
                         label="Общее количество инструмента"
                         variant="outlined"
                         fullWidth
                         value={instrumentQanti}
-                      
+                        onChange={(e) => setInstrumentQanti(Number(e.target.value))}
                         sx={{ mt: 2 }}
                     />
                     <Autocomplete
