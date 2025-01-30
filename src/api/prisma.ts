@@ -1208,6 +1208,30 @@ export default class prismaInteraction {
 
 
 
+    // Сверка склада
+
+
+        // Получение спика актов сверки
+        async getInventoryAudit() {
+            try {
+                // Получаем последнюю запись, отсортировав по убыванию (например, по id или createdAt)
+                const requestData = await prisma.inventoryAudit.findFirst({
+                    orderBy: {
+                        id: 'desc' // или 'createdAt': 'desc', если есть поле с датой создания
+                    }
+                });
+        
+                return requestData; // Возвращаем одну запись
+            } catch (error) {
+                console.error('Ошибка при получении последней записи:', error);
+                throw error;
+            } finally {
+                await prisma.$disconnect();
+            }
+        }
+    
+
+
 }
 
 

@@ -23,6 +23,7 @@ model User {
   role      Role   @relation(fields: [roleId], references: [id])
   logging Logging[]
   transactions   InstrumentTransaction[] // Связь с операциями
+  inventoryAudit  InventoryAudit[]
 }
 
 model Role {
@@ -40,6 +41,7 @@ model Instrument {
   machines       MachineInstrument[] 
   toolCell       ToolCell[]
   transactions   InstrumentTransaction[] // Связь с операциями
+   auditItems  AuditItem[] // связь с таблицей сверки
 }
 
 model Drawing {
@@ -108,6 +110,8 @@ model Logging {
   newData   Json?
   userId    Int?
   user      User?    @relation(fields: [userId], references: [id])
+  auditId         Int?           // Ссылка на сверку
+  audit           InventoryAudit? @relation(fields: [auditId], references: [id])
   description String?
   createdAt DateTime @default(now())
 
@@ -152,4 +156,27 @@ model InstrumentSummaryWriteOffRepair {
   totalReturnedInWrittenOff Int   @default(0) // Общее количество возвращённых инструментов на списание
 
   @@unique([instrumentId]) // Уникальный ключ
+}
+
+model InventoryAudit {
+  id          Int       @id @default(autoincrement())
+  userId      Int       // Ссылка на пользователя, который проводил сверку
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now()) // Дата и время начала сверки
+  completedAt DateTime? // Дата и время завершения сверки
+  status      String    @default("in_progress") // Статус: "in_progress" или "completed"
+  auditItems  AuditItem[] // Список элементов сверки
+  logs        Logging[]   // История изменений, связанных с этой сверкой
+}
+
+model AuditItem {
+  id              Int           @id @default(autoincrement())
+  auditId         Int           // Ссылка на сверку
+  audit           InventoryAudit @relation(fields: [auditId], references: [id])
+  instrumentId    Int           // Ссылка на инструмент
+  instrument      Instrument    @relation(fields: [instrumentId], references: [id])
+  expectedQuantity Int?          // Ожидаемое количество инструментов (из системы)
+  actualQuantity  Int           @default(0) // Фактическое количество инструментов
+  discrepancy     Int?          // Разница между ожидаемым и фактическим количеством (вычисляется на сервере)
+  notes           String?       // Заметки или комментарии по конкретному инструменту
 }
