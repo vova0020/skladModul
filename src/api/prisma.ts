@@ -621,28 +621,7 @@ export default class prismaInteraction {
 
         if (type == 'issue' || type == 'return') {
 
-            const summary2 = await prisma.instrumentSummary.upsert({
-                where: {
-                    instrumentId_machineId: {
-                        instrumentId,
-
-                        machineId: machineId || null,
-                    },
-                },
-                update: {
-                    totalIssued:
-                        type === 'issue' ? { increment: quantity } :
-                            type === 'return' ? { decrement: quantity } :
-                                undefined,
-                },
-                create: {
-                    instrumentId,
-
-                    machineId: machineId || null,
-                    totalIssued: type === 'issue' ? quantity : 0,
-
-                },
-            });
+           
             // Проверяем, существует ли запись с указанным instrumentId
             const existingSummary = await prisma.instrumentSummaryWriteOffRepair.findUnique({
                 where: {
@@ -677,7 +656,7 @@ export default class prismaInteraction {
             }
 
 
-            return { summary, summary2 }
+            return { summary }
         } else if (type == 'returnedInWrittenOff' || type == 'sendWriteOff') {
 
             // Проверяем, существует ли запись с указанным instrumentId
@@ -1149,10 +1128,67 @@ export default class prismaInteraction {
         }
     }
 
+
+
+
+ // Получение списка инструментов для главной страницы ===========================
+ async getDashboardInstrument() {
+    try {
+        const requestData = await prisma.instrument.findMany({
+            select: {
+                id: true,
+                name: true,
+                quantity: true,
+
+                drawing: {
+                    select: {
+                        id: true,
+                        name: true,
+                        filePath: true
+                    }
+                },
+                machines: {
+                    select: {
+                        machine: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                },
+                toolCell: {
+                    select: {
+                        id: true,
+                        storageCellsId: true,
+                        quantity: true,
+                        storageCells: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                },
+            
+            }
+        });
+
+        return requestData;
+    } catch (error) {
+        console.error('Ошибка при получении списка инструментов:', error);
+        throw error;
+    } finally {
+        await prisma.$disconnect();
+    }
+}
+
+
+
     // Получение списка выданных и возвращенных инструментов ===========================
     async getSummary() {
         try {
-            const requestData = await prisma.instrumentSummary.findMany();
+            const requestData = await prisma.instrumentSummaryWriteOffRepair.findMany();
 
             return requestData;
         } catch (error) {
@@ -1193,10 +1229,39 @@ export default class prismaInteraction {
     // Получение спика для главной страницы
     async getAllSpisanieIsse() {
         try {
-            const requestData = await prisma.instrumentSummaryWriteOffRepair.findMany();
-            // console.log(JSON.stringify(requestData, null, 2));
-
-            return requestData;
+            // Шаг 1: Получаем данные из instrumentSummaryWriteOffRepair
+            const writeOffRepairs = await prisma.instrumentSummaryWriteOffRepair.findMany();
+    
+            // Шаг 2: Собираем все уникальные instrumentId
+            const instrumentIds = [...new Set(writeOffRepairs.map(item => item.instrumentId))];
+    
+            // Шаг 3: Запрашиваем данные из таблицы instrument по собранным instrumentId
+            const instruments = await prisma.instrument.findMany({
+                where: {
+                    id: {
+                        in: instrumentIds,
+                    },
+                },
+                include:{
+                    drawing:true
+                }
+            });
+    
+            // Создаем объект для быстрого поиска инструментов по instrumentId
+            const instrumentMap = {};
+            instruments.forEach(instrument => {
+                instrumentMap[instrument.id] = instrument;
+            });
+    
+            // Шаг 4: Объединяем данные
+            const responseData = writeOffRepairs.map(item => {
+                return {
+                    ...item,
+                    instrumentDetails: instrumentMap[item.instrumentId] || null, // Добавляем детали инструмента
+                };
+            });
+    
+            return responseData;
         } catch (error) {
             console.error('Ошибка при получении списка ролей:', error);
             throw error;
@@ -1211,29 +1276,138 @@ export default class prismaInteraction {
     // Сверка склада
 
 
-        // Получение спика актов сверки
-        async getInventoryAudit() {
-            try {
-                // Получаем последнюю запись, отсортировав по убыванию (например, по id или createdAt)
-                const requestData = await prisma.inventoryAudit.findFirst({
-                    orderBy: {
-                        id: 'desc' // или 'createdAt': 'desc', если есть поле с датой создания
+    // Получение спика актов сверки
+    async getInventoryAudit() {
+        try {
+            // Получаем последнюю запись, включая связанные AuditItem и Instrument
+            const requestData = await prisma.inventoryAudit.findFirst({
+                orderBy: {
+                    id: 'desc' // Или 'createdAt': 'desc', если сортировка по дате
+                },
+                include: {
+                    auditItems: {
+                        include: {
+                            instrument: {
+                                select: {
+                                    id: true, // Только id инструмента
+                                    name: true,
+                                    quantity: true,
+                                }
+                            } // Включаем данные о связанных инструментах
+                        }
                     }
-                });
-        
-                return requestData; // Возвращаем одну запись
-            } catch (error) {
-                console.error('Ошибка при получении последней записи:', error);
-                throw error;
-            } finally {
-                await prisma.$disconnect();
-            }
+                }
+            });
+
+            return requestData; // Возвращаем запись с вложенными данными
+        } catch (error) {
+            console.error('Ошибка при получении последней записи:', error);
+            throw error;
+        } finally {
+            await prisma.$disconnect();
         }
+    }
+
+    // Получение спика актов сверки
+    async CreateInventoryAudit(userId: number) {
+        try {
+            // Получаем список всех инструментов
+            const instruments = await prisma.instrument.findMany();
+
+            // Создаем запись сверки вместе с AuditItem для каждого инструмента
+            const requestData = await prisma.inventoryAudit.create({
+                data: {
+                    userId: userId,
+                    auditItems: {
+                        create: instruments.map(instrument => ({
+                            instrumentId: instrument.id,
+                            // expectedQuantity: instrument.quantity ?? 0, // Если у инструмента есть количество в системе
+                            // actualQuantity: 0, // По умолчанию
+                        }))
+                    }
+                },
+                include: {
+                    auditItems: true, // Включаем созданные AuditItem в ответ
+                }
+            });
+
+            return requestData;
+        } catch (error) {
+            console.error('Ошибка при создании записи сверки:', error);
+            throw error;
+        } finally {
+            await prisma.$disconnect();
+        }
+        // Получение спика актов сверки
+
+
+
+    }
+    async  PutInventoryAudit(data) {
+        try {
+            if (!Array.isArray(data)) {
+                throw new Error('Ожидался массив данных');
+            }
     
-
-
+            // Обновляем все записи параллельно и возвращаем обновленные элементы
+            const updatedItems = await Promise.all(
+                data.map(items =>
+                    prisma.auditItem.update({
+                        where: { id: items.auditItemId },
+                        data: {
+                            actualQuantity: items.actualQuantity,
+                            notes: items.notes || null
+                        },
+                    })
+                )
+            );
+    
+            return updatedItems; // 🔹 Теперь функция возвращает обновленные записи
+    
+        } catch (error) {
+            console.error('Ошибка при обновлении записей сверки:', error);
+            throw error;
+        }
+    }
+    async  CompleteInventoryAudit(data) {
+        try {
+           console.log(data);
+           
+    
+            // Обновляем все записи параллельно
+            const updatedItems = await Promise.all(
+                data.auditItems.map(items =>
+                    prisma.auditItem.update({
+                        where: { id: items.auditItemId },
+                        data: {
+                            actualQuantity: items.actualQuantity,
+                            expectedQuantity: items.systemQuantity,
+                            discrepancy: items.systemQuantity - items.actualQuantity,
+                            notes: items.notes || null
+                        },
+                    })
+                )
+            );
+    
+            // Обновляем запись сверки после обновления элементов
+            const updatedAudit = await prisma.inventoryAudit.update({
+                where: { id: data.auditItems[0].auditId },  // Берем auditId из первого элемента
+                data: {
+                    completedAt: new Date(),
+                    status: 'completed',
+                },
+            });
+    
+            return { updatedItems, updatedAudit }; // Возвращаем обновленные записи
+    
+        } catch (error) {
+            console.error('Ошибка при обновлении записей сверки:', error);
+            throw error;
+        }
+    }
+    
+    
 }
-
 
 
 

@@ -137,17 +137,17 @@ model InstrumentTransaction {
   createdAt    DateTime   @default(now()) // Дата и время операции
 }
 
-model InstrumentSummary {
-  id           Int    @id @default(autoincrement())
-  instrumentId Int    // Ссылка на инструмент
-  issuedTo     String? // Кому выдан инструмент (например, имя пользователя или участок)
+// model InstrumentSummary {
+//   id           Int    @id @default(autoincrement())
+//   instrumentId Int    // Ссылка на инструмент
+//   issuedTo     String? // Кому выдан инструмент (например, имя пользователя или участок)
 
-  machineId    Int?   // Ссылка на станок (если инструмент выдан на станок)
-  totalIssued  Int    @default(0) // Общее количество выданных инструментов на станок
+//   machineId    Int?   // Ссылка на станок (если инструмент выдан на станок)
+//   totalIssued  Int    @default(0) // Общее количество выданных инструментов на станок
 
 
-  @@unique([instrumentId, machineId]) // Уникальный ключ
-}
+//   @@unique([instrumentId, machineId]) // Уникальный ключ
+// }
 model InstrumentSummaryWriteOffRepair {
   id           Int    @id @default(autoincrement())
   instrumentId Int    // Ссылка на инструмент

@@ -45,6 +45,9 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
 
   const [machines, setMachines] = useState([]);
   const [instruments, setInstruments] = useState([]);
+  const [allInstruments, setAllInstruments] = useState([]);
+
+
 
   React.useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -71,7 +74,7 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
       setMachines(machinesResponse.data);
 
       const instrumentsResponse = await axios.get('/api/adminka/updateInstrument');
-      setInstruments(instrumentsResponse.data);
+      setAllInstruments(instrumentsResponse.data);
 
       const storageCellsResponse = await axios.get('/api/adminka/updateCell');
       setStorageCells(storageCellsResponse.data);
@@ -97,16 +100,14 @@ const IssueInstrumentModal = ({ open, handleClose }) => {
 
   useEffect(() => {
     if (machine) {
-      // Фильтруем инструменты, проверяя, есть ли выбранный станок в массиве machines
-      const filteredInstruments = instruments.filter((instrument) =>
+      const filteredInstruments = allInstruments.filter((instrument) =>
         instrument.machines.some((m) => m.machineId === machine.id)
       );
       setInstruments(filteredInstruments);
     } else {
-      // Если станок не выбран, показываем все инструменты
-      fetchData(); // или другой метод для загрузки всех инструментов
+      setInstruments(allInstruments); // Возвращаем полный список, если станок не выбран
     }
-  }, [machine]);
+  }, [machine, allInstruments]);
 
   useEffect(() => {
     if (instrument && storageCells) {
