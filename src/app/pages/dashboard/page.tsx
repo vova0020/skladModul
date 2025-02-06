@@ -19,7 +19,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import { useState } from 'react';
 import IssueInstrumentModal from '@/app/components/modalOkna/IssueInstrumentModal';
-import { Instrument } from '@prisma/client';
+
 import axios from 'axios';
 import WriteOffInstrumentModal from '@/app/components/modalOkna/WriteOffInstrumentModal';
 import ReturnInstrumentModal from '@/app/components/modalOkna/ReturnInstrumentModal';
@@ -179,7 +179,8 @@ function Home() {
   const getInstruments = async () => {
     try {
       const response = await axios.get('/api/dashboardApi/getAllInstrument');
-      setInstruments(response.data.sort((a: Instrument, b: Instrument) => a.id - b.id));
+      // @ts-ignore
+      setInstruments(response.data.sort((a, b) => a.id - b.id));
       // console.log(response.data)
       const response3 = await axios.get('/api/dashboardApi/getAllSpisanieIsse');// @ts-ignore
       setStorageSummary(response3.data.sort((a, b) => a.id - b.id));
