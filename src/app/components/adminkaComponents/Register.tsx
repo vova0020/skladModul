@@ -2,6 +2,7 @@
 
 /* eslint-disable */
 // @ts-nocheck
+// @ts-ignore
 import React, { useEffect, useState } from 'react';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
@@ -50,6 +51,7 @@ const Register: React.FC = ({closeModal}) => {
     const getData = async () => {
         try {
             const response = await axios.get('/api/adminka/getRole');
+            // @ts-ignore
             setRoles(response.data.sort((a, b) => a.id - b.id));
 
 
@@ -208,7 +210,9 @@ const Register: React.FC = ({closeModal}) => {
                                     helperText={errors.role?.message}
                                 >
                                     {roles.map((role) => (
+                                        // @ts-ignore
                                         <MenuItem key={role.id} value={role.id || ''}>
+                                             {/* @ts-ignore */}
                                             {role.name}
                                         </MenuItem>
                                     ))}

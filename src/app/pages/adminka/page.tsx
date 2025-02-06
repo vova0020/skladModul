@@ -46,4 +46,4 @@ const AdminPage: React.FC = () => {
       </div>
     )
 }
-export default withAuth(AdminPage, [1,2]);
+export default withAuth(AdminPage, [1]);

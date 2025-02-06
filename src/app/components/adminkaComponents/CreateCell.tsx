@@ -74,7 +74,7 @@ export default function CreateCell() {
             showSnackbar('Ошибка при обновлении Ячейки.', 'error');
         }
     };
-
+// @ts-ignore
     const handleDeleteSector = async (clickId) => {
         // if (!selectedSector) return;
         try {

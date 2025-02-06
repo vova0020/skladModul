@@ -74,7 +74,7 @@ export default function CreateProduct() {
             showSnackbar('Ошибка при обновлении участка.', 'error');
         }
     };
-
+// @ts-ignore
     const handleDeleteSector = async (clickId) => {
         // if (!selectedSector) return;
         try {

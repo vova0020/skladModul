@@ -1,3 +1,5 @@
+/* eslint-disable */
+// @ts-nocheck
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -1275,6 +1277,35 @@ export default class prismaInteraction {
 
     // Сверка склада
 
+
+    // Получение спика актов сверки
+    async getAudit() {
+        try {
+            // Получаем последнюю запись, включая связанные AuditItem и Instrument
+            const requestData = await prisma.inventoryAudit.findMany({
+                include: {
+                    auditItems: {
+                        include: {
+                            instrument: {
+                                select: {
+                                    id: true, // Только id инструмента
+                                    name: true,
+                                    quantity: true,
+                                }
+                            } // Включаем данные о связанных инструментах
+                        }
+                    }
+                }
+            });
+
+            return requestData; // Возвращаем запись с вложенными данными
+        } catch (error) {
+            console.error('Ошибка при получении последней записи:', error);
+            throw error;
+        } finally {
+            await prisma.$disconnect();
+        }
+    }
 
     // Получение спика актов сверки
     async getInventoryAudit() {

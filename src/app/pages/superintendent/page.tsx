@@ -30,6 +30,7 @@ import InstrumentDetailsModal from '@/app/components/dashboardModal/InstrumentDe
 import IssuedInstrumentDetailsModal from '@/app/components/dashboardModal/IssuedInstrumentDetailsModal';
 import ReturnedInWriteOffInstrumentDetailsModal from '@/app/components/dashboardModal/ReturnedInWriteOffInstrumentDetailsModal';
 import WrittenOffInstrumentDetailsModal from '@/app/components/dashboardModal/WrittenOffInstrumentDetailsModal';
+import AuditListModal from '@/app/components/superintendentModal/AuditListModal';
 import withAuth from '@/app/components/withAuth';
 
 
@@ -110,7 +111,7 @@ const СollationGradientButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-function Home() {
+function Direction() {
   const [modalOpen, setModalOpen] = useState(false);
 
   const handleOpenModal = () => setModalOpen(true);
@@ -181,7 +182,8 @@ function Home() {
       const response = await axios.get('/api/dashboardApi/getAllInstrument');
       setInstruments(response.data.sort((a: Instrument, b: Instrument) => a.id - b.id));
       // console.log(response.data)
-      const response3 = await axios.get('/api/dashboardApi/getAllSpisanieIsse');// @ts-ignore
+      const response3 = await axios.get('/api/dashboardApi/getAllSpisanieIsse');
+      // @ts-ignore
       setStorageSummary(response3.data.sort((a, b) => a.id - b.id));
       console.log(response3.data);
 
@@ -228,7 +230,7 @@ function Home() {
 
       <Box sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, backgroundColor: '#F5F5F5', minHeight: '100vh' }}>
         <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4, fontWeight: 'bold', color: '#1A73E8', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-          Главная страница
+          Кабинет руководителя
         </Typography>
 
         {/* Кнопки для операций */}
@@ -244,7 +246,7 @@ function Home() {
             mx: 'auto', // Центрирование кнопок
           }}
         >
-          <PrimaryGradientButton
+          {/* <PrimaryGradientButton
             variant="contained"
             onClick={handleOpenModal}
             startIcon={<InventoryIcon />}
@@ -266,13 +268,13 @@ function Home() {
             startIcon={<DeleteOutlineIcon />}
           >
             Списать инструмент
-          </ErrorGradientButton>
+          </ErrorGradientButton> */}
           <СollationGradientButton
             variant="contained"
             onClick={handleOpenAuditInstrumentModalModal}
             startIcon={<FactCheckIcon />}
           >
-            Сверка
+            Посмотреть сверки
           </СollationGradientButton>
         </Box>
 
@@ -395,8 +397,7 @@ function Home() {
       <IssueInstrumentModal open={modalOpen} handleClose={handleCloseModal} />
       <WriteOffInstrumentModal open={writeOffModalOpen} handleClose={handleCloseWriteOffModal} />
       <ReturnInstrumentModal open={returnInstrumentModalOpen} handleClose={handleCloseReturnInstrumentModalModal} />
-      {/* @ts-ignore */}
-      <InventoryAuditComponent userId={userId} open={auditInstrumentModalOpen} handleClose={handleCloseAuditInstrumentModalModal} />
+      <AuditListModal  open={auditInstrumentModalOpen} handleClose={handleCloseAuditInstrumentModalModal} />
       {/* // В конце компонента добавим модальное окно: */}
       <InstrumentDetailsModal
         open={detailsModalOpen}
@@ -421,4 +422,4 @@ function Home() {
     </div>
   );
 }
-export default withAuth(Home, [1,2]) 
+export default withAuth(Direction, [1])

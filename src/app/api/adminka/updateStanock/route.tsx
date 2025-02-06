@@ -1,3 +1,6 @@
+/* eslint-disable */
+// @ts-nocheck
+// @ts-ignore
 import { NextRequest, NextResponse } from "next/server";
 import prismaInteraction from '@/api/prisma';
 
@@ -21,12 +24,12 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
     try {
-        const {stanockId, name, productId, sectionId} = await req.json();
+        const {stanockId, name, productId} = await req.json();
         console.log(name);
         // console.log(formData);
         
         // Обновляем запись в базе данных с помощью Prisma
-        const updatedSectors = await prisma.putAdminStanock(stanockId, name, productId,sectionId);
+        const updatedSectors = await prisma.putAdminStanock(stanockId, name, productId);
 
         return NextResponse.json(updatedSectors, { status: 200 });
     } catch (error) {

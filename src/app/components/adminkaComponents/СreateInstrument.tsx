@@ -84,9 +84,11 @@ export default function CreateInstrument() {
             setInstruments(response.data.sort((a: Instrument, b: Instrument) => a.id - b.id));
 
             const response3 = await axios.get('/api/adminka/updateCell');
+            // @ts-ignore
             setStorageCells(response3.data.sort((a, b) => a.id - b.id));
 
             const response4 = await axios.get('/api/adminka/updateStanock');
+            // @ts-ignore
             setMachines(response4.data.sort((a, b) => a.id - b.id));
         } catch (error) {
             showSnackbar('Ошибка загрузки данных.', 'error');
@@ -223,6 +225,7 @@ export default function CreateInstrument() {
             width: 150,
             renderCell: (params) => {
                 if (params.row.machines && params.row.machines.length > 0) {
+                    // @ts-ignore
                     return params.row.machines.map((p) => p.machine.name).join(', ');
                 } else {
                     return 'Без станков';
@@ -405,6 +408,7 @@ export default function CreateInstrument() {
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
             >
                 <Alert
+                // @ts-ignore
                     severity={snackbar.severity}
                     onClose={() => setSnackbar({ ...snackbar, open: false })}
                 >

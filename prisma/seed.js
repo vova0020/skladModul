@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 async function main() {
 
  // Создаем роли, если они еще не существуют
- const roles = ['Администратор', 'Руководство', 'Кладовщик', 'Пользователь'];
+ const roles = ['Администратор', 'Кладовщик'];
 
  for (const roleName of roles) {
    const role = await prisma.role.findUnique({ where: { name: roleName } });

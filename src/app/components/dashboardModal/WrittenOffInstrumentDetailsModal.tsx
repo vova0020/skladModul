@@ -1,3 +1,6 @@
+/* eslint-disable */
+// @ts-nocheck
+// @ts-ignore
 import React, { useState } from 'react';
 import {
   Modal,

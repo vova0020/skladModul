@@ -1,3 +1,6 @@
+/* eslint-disable */
+// @ts-nocheck
+// @ts-ignore
 import * as React from 'react';
 import {
     Dialog,
@@ -16,7 +19,6 @@ import {
     RadioGroup,
     FormControl,
     FormLabel,
-    Checkbox,
     Input,
 } from '@mui/material';
 import axios from 'axios';

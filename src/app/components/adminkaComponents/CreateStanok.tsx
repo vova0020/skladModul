@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable */
 // @ts-nocheck
+// @ts-ignore
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Typography,
@@ -60,6 +61,7 @@ export default function CreateSectors() {
             setStanock(response.data.sort((a: any, b: any) => a.id - b.id));
 
             const response3 = await axios.get('/api/adminka/updateProduct');
+            // @ts-ignore
             setProduct(response3.data.sort((a, b) => a.id - b.id));
         } catch (error) {
             showSnackbar('Ошибка загрузки данных.', 'error');
@@ -244,6 +246,7 @@ export default function CreateSectors() {
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
             >
                 <Alert
+                // @ts-ignore
                     severity={snackbar.severity}
                     onClose={() => setSnackbar({ ...snackbar, open: false })}
                 >

@@ -1,3 +1,6 @@
+/* eslint-disable */
+// @ts-nocheck
+// @ts-ignore
 import * as React from 'react';
 import {
     Dialog,

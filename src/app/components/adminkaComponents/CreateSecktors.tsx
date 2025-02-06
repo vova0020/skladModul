@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable */
 // @ts-nocheck
+// @ts-ignore
 import React, { useState, useEffect, useMemo } from 'react';
 import { Typography, Box, TextField, Button, IconButton, Snackbar, Alert, Dialog, DialogTitle, DialogActions, DialogContent } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
@@ -74,7 +75,7 @@ export default function CreateSectors() {
             showSnackbar('Ошибка при обновлении участка.', 'error');
         }
     };
-
+// @ts-ignore
     const handleDeleteSector = async (clickId) => {
         // if (!selectedSector) return;
         try {

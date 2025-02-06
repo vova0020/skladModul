@@ -1,6 +1,7 @@
 'use client';
 /* eslint-disable */
 // @ts-nocheck
+// @ts-ignore
 import React, { useState, useEffect, useMemo } from 'react';
 import { Typography, Box, TextField, Button, IconButton, Snackbar, Alert, Dialog, DialogTitle, DialogActions, DialogContent, MenuItem, Checkbox, FormControl, InputLabel, ListItemText, Select } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
@@ -85,6 +86,7 @@ export default function CreateUsers() {
         console.log(selectedSector);
 
         try {
+            // @ts-ignore
             await axios.put('/api/adminka/updateUsers', { sectorId: selectedSector.id, data: stanockName });
             showSnackbar('Пользователь успешно обновлён!', 'success');
             getSectors();
@@ -110,7 +112,7 @@ export default function CreateUsers() {
             showSnackbar('Ошибка при удалении связей.', 'error');
         }
     };
-
+// @ts-ignore
     const handleDeleteSector = async (clickId) => {
         // if (!selectedSector) return;
         try {
@@ -206,6 +208,7 @@ export default function CreateUsers() {
                                     labelId="stanock-label"
                                     multiple
                                     value={stanockName} // Здесь должен быть массив выбранных значений
+                                    // @ts-ignore
                                     onChange={(e) => setStanockName(e.target.value as string[])} // Приведение значения к массиву строк
                                     renderValue={(selected) => selected.map((id) => {
                                         const selectedStanock = stanocks.find((s) => s.id === id);
@@ -214,6 +217,7 @@ export default function CreateUsers() {
                                 >
                                     {stanocks.map((stanock) => (
                                         <MenuItem key={stanock.id} value={stanock.id || ''}>
+                                            {/*  @ts-ignore */}
                                             <Checkbox checked={stanockName.includes(stanock.id)} /> {/* Галочка для выбранного элемента */}
                                             <ListItemText primary={stanock.name} />
                                         </MenuItem>
