@@ -118,10 +118,9 @@ export default function CreateInstrument() {
     const handleAddInstrument = async () => {
         if (
             !instrumentName.trim() ||
-            selectedStorageCells.length === 0 ||
-            selectedMachines.length === 0
+            selectedMachines.length === 0 // Убрали проверку selectedStorageCells
         ) {
-            showSnackbar('Название, ячейки хранения и станки не могут быть пустыми.', 'error');
+            showSnackbar('Название и станки не могут быть пустыми.', 'error'); // Обновили сообщение
             return;
         }
 
@@ -346,23 +345,24 @@ export default function CreateInstrument() {
                         sx={{ mt: 2 }}
                     />
                     {selectedStorageCells.map((cell, index) => (
-                        <Box key={cell.storageCellId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Typography variant="body1">
-                                {storageCells.find((c) => c.id === cell.storageCellId)?.name}
-                            </Typography>
-                            <TextField
-                                label="Количество"
-                                variant="outlined"
-                                type="number"
-                                value={cell.quantity === 0 ? "" : cell.quantity}
-                                onChange={(e) => {
-                                    const updatedCells = [...selectedStorageCells];
-                                    updatedCells[index].quantity = e.target.value === "" ? 0 : Number(e.target.value);
-                                    setSelectedStorageCells(updatedCells);
-                                }}
-                            />
-                        </Box>
-                    ))}
+    <Box key={cell.storageCellId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography variant="body1">
+            {storageCells.find((c) => c.id === cell.storageCellId)?.name}
+        </Typography>
+        <TextField
+            label="Количество"
+            variant="outlined"
+            type="number"
+            value={cell.quantity}
+            onChange={(e) => {
+                const updatedCells = [...selectedStorageCells];
+                updatedCells[index].quantity = Number(e.target.value);
+                setSelectedStorageCells(updatedCells);
+            }}
+            inputProps={{ min: 0 }} // Разрешаем нулевые значения
+        />
+    </Box>
+))}
                     <Autocomplete
                         multiple
                         options={machines}

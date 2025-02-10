@@ -142,30 +142,36 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
                 const quantity = quantities[cell.id] || 0;
                 return sum + (quantity === '' ? 0 : quantity);
             }, 0);
-
-            if (totalQuantity > instrumentQuantity) {
-                setQuantityError(`Сумма количеств по ячейкам (${totalQuantity}) превышает общее количество (${instrumentQuantity}).`);
-                return false;
+    
+            if (newSelectedCells.length === 0) {
+                // Проверяем, что при отсутствии ячеек количество равно 0
+                if (instrumentQuantity !== 0) {
+                    setQuantityError('При отсутствии ячеек общее количество должно быть 0.');
+                    return false;
+                }
             } else {
-                setQuantityError('');
-                return true;
+                // Проверяем, что сумма по ячейкам равна общему количеству
+                if (totalQuantity !== instrumentQuantity) {
+                    setQuantityError(`Сумма количеств по ячейкам (${totalQuantity}) должна равняться общему количеству (${instrumentQuantity}).`);
+                    return false;
+                }
             }
+    
+            setQuantityError('');
+            return true;
         }
         return true;
     };
 
     const handleSubmit = async () => {
         if (operationType === 'receive') {
-            // Логика для получения инструмента
-            if (
-                !instrumentName.trim() ||
-                newSelectedCells.length === 0 ||
-                selectedMachines.length === 0
-            ) {
-                setSnackbar({ open: true, message: 'Название, ячейки хранения и станки не могут быть пустыми.', severity: 'error' });
+            // Проверяем только название инструмента
+            if (!instrumentName.trim()) {
+                setSnackbar({ open: true, message: 'Название инструмента не может быть пустым.', severity: 'error' });
                 return;
             }
-
+    
+            // Валидируем количество
             if (!validateQuantities()) {
                 return;
             }
