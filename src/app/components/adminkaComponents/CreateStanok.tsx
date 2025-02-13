@@ -58,7 +58,15 @@ export default function CreateSectors() {
     const getSectors = async () => {
         try {
             const response = await axios.get('/api/adminka/updateStanock');
-            setStanock(response.data.sort((a: any, b: any) => a.id - b.id));
+            const stanockData = response.data.map((stan: any) => ({
+                ...stan,
+                productNames:
+                    stan.product && stan.product.length > 0
+                        ? stan.product.map((p: any) => p.product.name).join(', ')
+                        : 'Без изделий',
+            }));
+    
+            setStanock(stanockData.sort((a: any, b: any) => a.id - b.id));
 
             const response3 = await axios.get('/api/adminka/updateProduct');
             // @ts-ignore
@@ -128,16 +136,9 @@ export default function CreateSectors() {
         { field: 'id', headerName: 'ID', width: 20 },
         { field: 'name', headerName: 'Название', width: 150 },
         {
-            field: 'productName',
+            field: 'productNames',
             headerName: 'Связь с изделиями',
-            width: 150,
-            renderCell: (params) => {
-                if (params.row.product && params.row.product.length > 0) {
-                    return params.row.product.map((p: any) => p.product.name).join(', ');
-                } else {
-                    return 'Без изделий';
-                }
-            },
+            width: 200,
         },
         {
             field: 'actions',

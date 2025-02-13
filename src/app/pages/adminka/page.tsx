@@ -17,13 +17,13 @@ const AdminPage: React.FC = () => {
     return (
         <div style={{ minHeight: '100vh', overflowY: 'auto' }}>
         <Navbar />
-        <div style={{ width: '100%', padding: '10px' }}>
+        <div style={{ width: '100%', maxHeight:'800px', padding: '10px' }}>
           <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
             <div style={{ width: '100%', padding: '10px' }}>
               <CreateUsers />
             </div>
           </div>
-          <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ width: '100%',maxHeight:'800px', display: 'flex', justifyContent: 'space-between' }}>
             <div style={{ width: '49%', padding: '10px' }}>
               <CreateProduct />
             </div>
@@ -31,11 +31,11 @@ const AdminPage: React.FC = () => {
             <CreateStanok />
             </div>
           </div>
-          <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ width: '100%',maxHeight:'800px', display: 'flex', justifyContent: 'space-between'  }}>
             <div style={{ width: '49%', padding: '10px' }}>
               <CreateCell />
             </div>
-            <div style={{ width: '49%', boxSizing: 'border-box', padding: '10px' }}>
+            <div style={{ width: '49%',  boxSizing: 'border-box', padding: '10px' }}>
             <СreateInstrument />
             </div>
           </div>

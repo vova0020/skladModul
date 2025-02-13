@@ -81,7 +81,22 @@ export default function CreateInstrument() {
     const getInstruments = async () => {
         try {
             const response = await axios.get('/api/adminka/updateInstrument');
-            setInstruments(response.data.sort((a: Instrument, b: Instrument) => a.id - b.id));
+            const instrumentsData = response.data.map((inst: Instrument) => ({
+                ...inst,
+                drawingName: inst.drawing?.name || 'без чертежа',
+                machineNames:
+                  inst.machines && inst.machines.length > 0
+                    ? inst.machines.map((m: any) => m.machine.name).join(', ')
+                    : 'Без станков',
+                storageCellNames:
+                  inst.toolCell && inst.toolCell.length > 0
+                    ? inst.toolCell.map((cell: any) => `${cell.storageCells.name} (${cell.quantity} шт)`).join(', ')
+                    : 'Без ячеек',
+                    
+              }));
+
+
+            await setInstruments(instrumentsData.sort((a: Instrument, b: Instrument) => a.id - b.id));
 
             const response3 = await axios.get('/api/adminka/updateCell');
             // @ts-ignore
@@ -197,39 +212,19 @@ export default function CreateInstrument() {
         { field: 'name', headerName: 'Название', width: 150 },
         { field: 'quantity', headerName: 'Количество', width: 150 },
         {
-            field: 'drawings',
+            field: 'drawingName',
             headerName: 'Чертеж',
             width: 150,
-            renderCell: (params) => {
-                return params.row.drawing?.name || 'без чертежа';
-            },
-        },
+          },
         {
             field: 'storageCellNames',
             headerName: 'Ячейки хранения',
             width: 200,
-            renderCell: (params) => {
-                if (params.row.toolCell && params.row.toolCell.length > 0) {
-                    return params.row.toolCell
-                        .map((cell: any) => `${cell.storageCells.name} (${cell.quantity}.шт)`)
-                        .join(', ');
-                } else {
-                    return 'Без ячеек';
-                }
-            },
         },
         {
             field: 'machineNames',
             headerName: 'Станки',
             width: 150,
-            renderCell: (params) => {
-                if (params.row.machines && params.row.machines.length > 0) {
-                    // @ts-ignore
-                    return params.row.machines.map((p) => p.machine.name).join(', ');
-                } else {
-                    return 'Без станков';
-                }
-            },
         },
         {
             field: 'actions',
@@ -345,24 +340,24 @@ export default function CreateInstrument() {
                         sx={{ mt: 2 }}
                     />
                     {selectedStorageCells.map((cell, index) => (
-    <Box key={cell.storageCellId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Typography variant="body1">
-            {storageCells.find((c) => c.id === cell.storageCellId)?.name}
-        </Typography>
-        <TextField
-            label="Количество"
-            variant="outlined"
-            type="number"
-            value={cell.quantity}
-            onChange={(e) => {
-                const updatedCells = [...selectedStorageCells];
-                updatedCells[index].quantity = Number(e.target.value);
-                setSelectedStorageCells(updatedCells);
-            }}
-            inputProps={{ min: 0 }} // Разрешаем нулевые значения
-        />
-    </Box>
-))}
+                        <Box key={cell.storageCellId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="body1">
+                                {storageCells.find((c) => c.id === cell.storageCellId)?.name}
+                            </Typography>
+                            <TextField
+                                label="Количество"
+                                variant="outlined"
+                                type="number"
+                                value={cell.quantity}
+                                onChange={(e) => {
+                                    const updatedCells = [...selectedStorageCells];
+                                    updatedCells[index].quantity = Number(e.target.value);
+                                    setSelectedStorageCells(updatedCells);
+                                }}
+                                inputProps={{ min: 0 }} // Разрешаем нулевые значения
+                            />
+                        </Box>
+                    ))}
                     <Autocomplete
                         multiple
                         options={machines}
@@ -408,7 +403,7 @@ export default function CreateInstrument() {
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
             >
                 <Alert
-                // @ts-ignore
+                    // @ts-ignore
                     severity={snackbar.severity}
                     onClose={() => setSnackbar({ ...snackbar, open: false })}
                 >
