@@ -30,8 +30,8 @@ export async function PUT(req: NextRequest) {
 
         return NextResponse.json(updatedSectors, { status: 200 });
     } catch (error) {
-        console.error('Ошибка при обновлении Участка:', error);
-        return NextResponse.json({ message: 'Ошибка при обновлении Участка' }, { status: 500 });
+        console.error('Ошибка при обновлении Ячейки:', error);
+        return NextResponse.json({ message: 'Ошибка при обновлении Ячейки' }, { status: 500 });
     }
 }
 export async function DELETE(req: NextRequest) {
@@ -45,8 +45,8 @@ export async function DELETE(req: NextRequest) {
 
         return NextResponse.json(updatedSectors, { status: 200 });
     } catch (error) {
-        console.error('Ошибка при обновлении Участка:', error);
-        return NextResponse.json({ message: 'Ошибка при обновлении Участка' }, { status: 500 });
+        console.error('Ошибка при обновлении Ячейки:', error);
+        return NextResponse.json({ message: 'Ошибка при обновлении Ячейки' }, { status: 500 });
     }
 }
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         
         return NextResponse.json(newOrder, { status: 201 });
     } catch (error) {
-        console.error('Ошибка при создании Участка:', error);
-        return NextResponse.json({ message: 'Ошибка при создании Участка' }, { status: 500 });
+        console.error('Ошибка при создании Ячейки:', error);
+        return NextResponse.json({ message: 'Ошибка при создании Ячейки' }, { status: 500 });
     }
 }

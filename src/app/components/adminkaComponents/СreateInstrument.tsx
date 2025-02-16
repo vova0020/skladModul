@@ -198,6 +198,8 @@ export default function CreateInstrument() {
     };
 
     const handleDeleteInstrument = async (clickId: number) => {
+        console.log(clickId);
+        
         try {
             await axios.delete('/api/adminka/updateInstrument', { data: { instrumentId: clickId } });
             showSnackbar('Инструмент удалён!', 'success');
@@ -250,9 +252,9 @@ export default function CreateInstrument() {
                     >
                         <EditIcon />
                     </IconButton>
-                    {/* <IconButton onClick={() => handleDeleteInstrument(params.row.id)}>
+                    <IconButton onClick={() => handleDeleteInstrument(params.row.id)}>
                         <DeleteIcon />
-                    </IconButton> */}
+                    </IconButton>
                 </>
             ),
             width: 150,

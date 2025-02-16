@@ -519,18 +519,20 @@ export default class prismaInteraction {
             await prisma.$disconnect();
         }
     }
-    // Удаление  станка
-    async delAdminInstrument(stanockId: number) {
+    // Удаление  инструмента
+    async delAdminInstrument(instrumentId: number) {
+        console.log(instrumentId);
+        
         try {
             // Удаляем станок
-            const deletedSector = await prisma.machine.delete({
-                where: { id: stanockId },
+            const deletedSector = await prisma.instrument.delete({
+                where: { id: instrumentId },
             });
 
             return deletedSector;
         } catch (error) {
-            console.error('Ошибка при удалении станка:', error);
-            throw new Error('Ошибка при удалении станка');
+            console.error('Ошибка при удалении инструмента:', error);
+            throw new Error('Ошибка при удалении инструмента');
         } finally {
             await prisma.$disconnect();
         }

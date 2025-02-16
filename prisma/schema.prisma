@@ -121,7 +121,7 @@ model Logging {
 model InstrumentTransaction {
   id           Int        @id @default(autoincrement())
   instrumentId Int        // Ссылка на инструмент
-  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  instrument  Instrument  @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
   type         String     // Тип операции: "issue" (выдача), "return" (возврат), "write_off" (списание), "receipt" (приход)
   quantity     Int        // Количество инструментов
   status       String?    // Статус инструмента: "new" (новый), "used" (использованный)
@@ -174,7 +174,7 @@ model AuditItem {
   auditId         Int           // Ссылка на сверку
   audit           InventoryAudit @relation(fields: [auditId], references: [id])
   instrumentId    Int           // Ссылка на инструмент
-  instrument      Instrument    @relation(fields: [instrumentId], references: [id])
+  instrument  Instrument  @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
   expectedQuantity Int?          // Ожидаемое количество инструментов (из системы)
   actualQuantity  Int           @default(0) // Фактическое количество инструментов
   discrepancy     Int?          // Разница между ожидаемым и фактическим количеством (вычисляется на сервере)

@@ -77,17 +77,17 @@ export async function PUT(req: NextRequest) {
 }
 export async function DELETE(req: NextRequest) {
     try {
-        const {stanockId} = await req.json();
-        console.log(stanockId);
+        const {instrumentId} = await req.json();
+        // console.log(instrumentId);
         // console.log(formData);
         
         // Обновляем запись в базе данных с помощью Prisma
-        const updatedSectors = await prisma.delAdminInstrument(stanockId);
+        const updatedSectors = await prisma.delAdminInstrument(instrumentId);
 
         return NextResponse.json(updatedSectors, { status: 200 });
     } catch (error) {
-        console.error('Ошибка при обновлении Участка:', error);
-        return NextResponse.json({ message: 'Ошибка при обновлении Участка' }, { status: 500 });
+        console.error('Ошибка при обновлении инструмента:', error);
+        return NextResponse.json({ message: 'Ошибка при обновлении инструмента' }, { status: 500 });
     }
 }
 
