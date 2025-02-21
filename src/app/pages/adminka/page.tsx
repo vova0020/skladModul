@@ -36,11 +36,11 @@ const AdminPage: React.FC = () => {
               <CreateCell />
             </div>
             <div style={{ width: '49%',  boxSizing: 'border-box', padding: '10px' }}>
-            <СreateInstrument />
+            {/* <СreateInstrument /> */}
             </div>
           </div>
-          <div>
-            {/* <CreateReasonsDowntime /> */}
+          <div style={{ width: '100%',maxHeight:'800px' }}>
+          <СreateInstrument />
           </div>
         </div>
       </div>

@@ -17,10 +17,12 @@ if (!SECRET_KEY) {
 export async function POST(req: NextRequest) {
     try {
         const { login, password } = await req.json();
-
+        console.log(login);
+        console.log(password);
+        
         // Проверка существующего пользователя
         const user = await prisma.findUserByLogin(login);
-
+        console.log(user);
         if (!user) {
             return NextResponse.json({ message: "Неверный логин или пароль" }, { status: 401 });
         }

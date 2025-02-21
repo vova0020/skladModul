@@ -31,7 +31,7 @@ import IssuedInstrumentDetailsModal from '@/app/components/dashboardModal/Issued
 import ReturnedInWriteOffInstrumentDetailsModal from '@/app/components/dashboardModal/ReturnedInWriteOffInstrumentDetailsModal';
 import WrittenOffInstrumentDetailsModal from '@/app/components/dashboardModal/WrittenOffInstrumentDetailsModal';
 import withAuth from '@/app/components/withAuth';
-
+import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 
 
 // Основной цвет: глубокий синий (#1A73E8)
@@ -275,6 +275,14 @@ function Home() {
           >
             Сверка
           </СollationGradientButton>
+
+          {/* <СollationGradientButton
+            variant="contained"
+            // onClick={handleOpenAuditInstrumentModalModal}
+            startIcon={<SettingsSuggestIcon sx={{ fontSize: '5rem' }} />}
+          >
+            Отправить/принять с токарки
+          </СollationGradientButton> */}
         </Box>
 
         {/* Карточки с показателями */}

@@ -85,18 +85,17 @@ export default function CreateInstrument() {
                 ...inst,
                 drawingName: inst.drawing?.name || 'без чертежа',
                 machineNames:
-                  inst.machines && inst.machines.length > 0
-                    ? inst.machines.map((m: any) => m.machine.name).join(', ')
-                    : 'Без станков',
+                    inst.machines && inst.machines.length > 0
+                        ? inst.machines.map((m: any) => m.machine.name).join(', ')
+                        : 'Без станков',
                 storageCellNames:
-                  inst.toolCell && inst.toolCell.length > 0
-                    ? inst.toolCell.map((cell: any) => `${cell.storageCells.name} (${cell.quantity} шт)`).join(', ')
-                    : 'Без ячеек',
-                    
-              }));
-
+                    inst.toolCell && inst.toolCell.length > 0
+                        ? inst.toolCell.map((cell: any) => `${cell.storageCells.name} (${cell.quantity} шт)`).join(', ')
+                        : 'Без ячеек',
+            }));
 
             await setInstruments(instrumentsData.sort((a: Instrument, b: Instrument) => a.id - b.id));
+            console.log(instruments);
 
             const response3 = await axios.get('/api/adminka/updateCell');
             // @ts-ignore
@@ -122,6 +121,7 @@ export default function CreateInstrument() {
         setSelectedMachines([]);
         setFile(null);
         setDialogAction(null);
+        setSelectedInstrument(null);
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,7 +156,7 @@ export default function CreateInstrument() {
                 formData.append('file', file);
             }
 
-            const response = await axios.post('/api/adminka/updateInstrument', formData, {
+            await axios.post('/api/adminka/updateInstrument', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -183,7 +183,7 @@ export default function CreateInstrument() {
                 formData.append('file', file);
             }
 
-            const response = await axios.put('/api/adminka/updateInstrument', formData, {
+            await axios.put('/api/adminka/updateInstrument', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -199,7 +199,7 @@ export default function CreateInstrument() {
 
     const handleDeleteInstrument = async (clickId: number) => {
         console.log(clickId);
-        
+
         try {
             await axios.delete('/api/adminka/updateInstrument', { data: { instrumentId: clickId } });
             showSnackbar('Инструмент удалён!', 'success');
@@ -217,7 +217,7 @@ export default function CreateInstrument() {
             field: 'drawingName',
             headerName: 'Чертеж',
             width: 150,
-          },
+        },
         {
             field: 'storageCellNames',
             headerName: 'Ячейки хранения',
@@ -390,6 +390,11 @@ export default function CreateInstrument() {
                         onChange={handleFileChange}
                         sx={{ mt: 2 }}
                     />
+                    {dialogAction === 'edit' && (
+                        <Typography variant="body1" sx={{ mt: 2 }}>
+                            Название Чертежа: {selectedInstrument?.drawing?.name || 'Без чертежа'}
+                        </Typography>
+                    )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDialogClose}>Отмена</Button>
