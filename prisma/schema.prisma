@@ -14,16 +14,16 @@ datasource db {
 }
 
 model User {
-  id        Int     @id @default(autoincrement())
-  firstName String?
-  lastName  String?
-  login     String  @unique
-  password  String
-  roleId    Int
-  role      Role   @relation(fields: [roleId], references: [id])
-  logging Logging[]
+  id             Int                     @id @default(autoincrement())
+  firstName      String?
+  lastName       String?
+  login          String                  @unique
+  password       String
+  roleId         Int
+  role           Role                    @relation(fields: [roleId], references: [id])
+  logging        Logging[]
   transactions   InstrumentTransaction[] // Связь с операциями
-  inventoryAudit  InventoryAudit[]
+  inventoryAudit InventoryAudit[]
 }
 
 model Role {
@@ -33,33 +33,33 @@ model Role {
 }
 
 model Instrument {
-  id             Int                 @id @default(autoincrement())
-  name           String
-  quantity       Int
-  drawingId      Int?
-  drawing        Drawing?            @relation(fields: [drawingId], references: [id] , onDelete: Cascade)
-  machines       MachineInstrument[] 
-  toolCell       ToolCell[]
-  transactions   InstrumentTransaction[] // Связь с операциями
-   auditItems  AuditItem[] // связь с таблицей сверки
+  id               Int                     @id @default(autoincrement())
+  name             String
+  quantity         Int
+  drawingId        Int?
+  drawing          Drawing?                @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  machines         MachineInstrument[]
+  toolCell         ToolCell[]
+  transactions     InstrumentTransaction[] // Связь с операциями
+  auditItems       AuditItem[] // связь с таблицей сверки
+  instrumentTurner InstrumentTurner[]
 }
 
 model Drawing {
   id         Int          @id @default(autoincrement())
   name       String
-  filePath   String?      // Путь к PDF-файлу
+  filePath   String? // Путь к PDF-файлу
   instrument Instrument[]
 }
 
-
 model Machine {
-  id         Int                 @id @default(autoincrement())
-  name       String
-  type       String?
-  product    MachineProduct[] 
-  instrument MachineInstrument[]
-  sectionId  Int?
-  transactions   InstrumentTransaction[] // Связь с операциями
+  id           Int                     @id @default(autoincrement())
+  name         String
+  type         String?
+  product      MachineProduct[]
+  instrument   MachineInstrument[]
+  sectionId    Int?
+  transactions InstrumentTransaction[] // Связь с операциями
 }
 
 model MachineInstrument {
@@ -85,98 +85,97 @@ model MachineProduct {
 }
 
 model StorageCells {
-  id         Int          @id @default(autoincrement())
-  name       String
+  id       Int        @id @default(autoincrement())
+  name     String
   toolCell ToolCell[]
 }
 
 model ToolCell {
-  id          Int    @id @default(autoincrement())
-  instrumentId      Int
-  storageCellsId      Int
-  quantity    Int
-  instrument        Instrument   @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
-  storageCells        StorageCells   @relation(fields: [storageCellsId], references: [id], onDelete: Cascade)
+  id             Int          @id @default(autoincrement())
+  instrumentId   Int
+  storageCellsId Int
+  quantity       Int
+  instrument     Instrument   @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  storageCells   StorageCells @relation(fields: [storageCellsId], references: [id], onDelete: Cascade)
 
   @@unique([instrumentId, storageCellsId])
 }
 
 model Logging {
-  id        Int      @id @default(autoincrement())
-  action    String
-  tableName String
-  recordId  Int
-  oldData   Json?
-  newData   Json?
-  userId    Int?
-  user      User?    @relation(fields: [userId], references: [id])
-  auditId         Int?           // Ссылка на сверку
-  audit           InventoryAudit? @relation(fields: [auditId], references: [id])
+  id          Int             @id @default(autoincrement())
+  action      String
+  tableName   String
+  recordId    Int
+  oldData     Json?
+  newData     Json?
+  userId      Int?
+  user        User?           @relation(fields: [userId], references: [id])
+  auditId     Int? // Ссылка на сверку
+  audit       InventoryAudit? @relation(fields: [auditId], references: [id])
   description String?
-  createdAt DateTime @default(now())
+  createdAt   DateTime        @default(now())
 
   @@index([tableName, recordId])
 }
 
 model InstrumentTransaction {
   id           Int        @id @default(autoincrement())
-  instrumentId Int        // Ссылка на инструмент
-  instrument  Instrument  @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
-  type         String     // Тип операции: "issue" (выдача), "return" (возврат), "write_off" (списание), "receipt" (приход)
-  quantity     Int        // Количество инструментов
-  status       String?    // Статус инструмента: "new" (новый), "used" (использованный)
-  issuedTo     String?    // Кому выдается инструмент (имя и фамилия, вводится вручную)
-  sectionId    Int?       // Ссылка на участок (если инструмент выдается на участок)
+  instrumentId Int // Ссылка на инструмент
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  type         String // Тип операции: "issue" (выдача), "return" (возврат), "write_off" (списание), "receipt" (приход)
+  quantity     Int // Количество инструментов
+  status       String? // Статус инструмента: "new" (новый), "used" (использованный)
+  issuedTo     String? // Кому выдается инструмент (имя и фамилия, вводится вручную)
+  sectionId    Int? // Ссылка на участок (если инструмент выдается на участок)
 
-  machineId    Int?       // Ссылка на станок (если инструмент выдается на станок)
-  machine      Machine?   @relation(fields: [machineId], references: [id])
-  userId       Int?       // Ссылка на пользователя, который выполнил операцию
-  user         User?      @relation(fields: [userId], references: [id])
-  reason       String?    // Причина списания
+  machineId       Int? // Ссылка на станок (если инструмент выдается на станок)
+  machine         Machine? @relation(fields: [machineId], references: [id])
+  userId          Int? // Ссылка на пользователя, который выполнил операцию
+  user            User?    @relation(fields: [userId], references: [id])
+  reason          String? // Причина списания
   transactionType String // "section" или "machine"
-  createdAt    DateTime   @default(now()) // Дата и время операции
+  createdAt       DateTime @default(now()) // Дата и время операции
 }
 
-// model InstrumentSummary {
-//   id           Int    @id @default(autoincrement())
-//   instrumentId Int    // Ссылка на инструмент
-//   issuedTo     String? // Кому выдан инструмент (например, имя пользователя или участок)
-
-//   machineId    Int?   // Ссылка на станок (если инструмент выдан на станок)
-//   totalIssued  Int    @default(0) // Общее количество выданных инструментов на станок
-
-
-//   @@unique([instrumentId, machineId]) // Уникальный ключ
-// }
 model InstrumentSummaryWriteOffRepair {
-  id           Int    @id @default(autoincrement())
-  instrumentId Int    // Ссылка на инструмент
-  totalIssuedCeh  Int    @default(0) // Общее количество выданных инструментов в цех
-  totalWrittenOff Int @default(0) // Общее количество списанных инструментов
-  totalReturnedInWrittenOff Int   @default(0) // Общее количество возвращённых инструментов на списание
+  id                        Int @id @default(autoincrement())
+  instrumentId              Int // Ссылка на инструмент
+  totalIssuedCeh            Int @default(0) // Общее количество выданных инструментов в цех
+  totalWrittenOff           Int @default(0) // Общее количество списанных инструментов
+  totalReturnedInWrittenOff Int @default(0) // Общее количество возвращённых инструментов на списание
 
   @@unique([instrumentId]) // Уникальный ключ
 }
 
 model InventoryAudit {
-  id          Int       @id @default(autoincrement())
-  userId      Int       // Ссылка на пользователя, который проводил сверку
-  user        User      @relation(fields: [userId], references: [id])
-  createdAt   DateTime  @default(now()) // Дата и время начала сверки
+  id          Int         @id @default(autoincrement())
+  userId      Int // Ссылка на пользователя, который проводил сверку
+  user        User        @relation(fields: [userId], references: [id])
+  createdAt   DateTime    @default(now()) // Дата и время начала сверки
   completedAt DateTime? // Дата и время завершения сверки
-  status      String    @default("in_progress") // Статус: "in_progress" или "completed"
+  status      String      @default("in_progress") // Статус: "in_progress" или "completed"
   auditItems  AuditItem[] // Список элементов сверки
-  logs        Logging[]   // История изменений, связанных с этой сверкой
+  logs        Logging[] // История изменений, связанных с этой сверкой
 }
 
 model AuditItem {
-  id              Int           @id @default(autoincrement())
-  auditId         Int           // Ссылка на сверку
-  audit           InventoryAudit @relation(fields: [auditId], references: [id])
-  instrumentId    Int           // Ссылка на инструмент
-  instrument  Instrument  @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
-  expectedQuantity Int?          // Ожидаемое количество инструментов (из системы)
-  actualQuantity  Int           @default(0) // Фактическое количество инструментов
-  discrepancy     Int?          // Разница между ожидаемым и фактическим количеством (вычисляется на сервере)
-  notes           String?       // Заметки или комментарии по конкретному инструменту
+  id               Int            @id @default(autoincrement())
+  auditId          Int // Ссылка на сверку
+  audit            InventoryAudit @relation(fields: [auditId], references: [id])
+  instrumentId     Int // Ссылка на инструмент
+  instrument       Instrument     @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  expectedQuantity Int? // Ожидаемое количество инструментов (из системы)
+  actualQuantity   Int            @default(0) // Фактическое количество инструментов
+  discrepancy      Int? // Разница между ожидаемым и фактическим количеством (вычисляется на сервере)
+  notes            String? // Заметки или комментарии по конкретному инструменту
+}
+
+// Выданный инструмент в токарку
+model InstrumentTurner {
+  id           Int        @id @default(autoincrement())
+  instrumentId Int
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  totalTurner  Int        @default(0) // Общее количество выданного инструмента на токарку
+
+  @@unique([instrumentId]) // Уникальный ключ
 }

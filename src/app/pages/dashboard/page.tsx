@@ -32,6 +32,7 @@ import ReturnedInWriteOffInstrumentDetailsModal from '@/app/components/dashboard
 import WrittenOffInstrumentDetailsModal from '@/app/components/dashboardModal/WrittenOffInstrumentDetailsModal';
 import withAuth from '@/app/components/withAuth';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
+import ToolTransactionModal from '@/app/components/modalOkna/ToolTransactionModal';
 
 
 // Основной цвет: глубокий синий (#1A73E8)
@@ -110,6 +111,25 @@ const СollationGradientButton = styled(Button)(({ theme }) => ({
   },
 }));
 
+// Цвет сверки: желтый (#EA4335)
+const TokarGradientButton = styled(Button)(({ theme }) => ({
+  background: 'linear-gradient(45deg,rgb(246, 207, 12) 30%,rgb(180, 192, 106) 90%)',
+  padding: '8px',
+  color: 'white',
+  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  height: '70px',
+  borderRadius: '10px',
+  boxShadow: '0 3px 5px 2px rgba(234, 67, 53, .3)',
+  transition: 'transform 0.2s, box-shadow 0.2s',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: '0 5px 7px 3px rgba(234, 67, 53, .4)',
+  },
+  [theme.breakpoints.up('sm')]: {
+    width: '200px', // На планшетах и ПК фиксированная ширина
+  },
+}));
+
 function Home() {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -130,6 +150,11 @@ function Home() {
 
   const handleOpenAuditInstrumentModalModal = () => setAuditInstrumentModalOpen(true);
   const handleCloseAuditInstrumentModalModal = () => setAuditInstrumentModalOpen(false);
+
+  const [toolTransactionModal, setToolTransactionModal] = useState(false);
+
+  const handleOpenToolTransactionModal = () => setToolTransactionModal(true);
+  const handleCloseToolTransactionModal = () => setToolTransactionModal(false);
 
   // В компоненте Home добавим состояние для модального окна
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -184,7 +209,7 @@ function Home() {
       // console.log(response.data)
       const response3 = await axios.get('/api/dashboardApi/getAllSpisanieIsse');// @ts-ignore
       setStorageSummary(response3.data.sort((a, b) => a.id - b.id));
-      console.log(response3.data);
+      // console.log(response3.data);
 
 
     } catch (error) {
@@ -276,13 +301,13 @@ function Home() {
             Сверка
           </СollationGradientButton>
 
-          {/* <СollationGradientButton
+          <TokarGradientButton
             variant="contained"
-            // onClick={handleOpenAuditInstrumentModalModal}
+            onClick={handleOpenToolTransactionModal}
             startIcon={<SettingsSuggestIcon sx={{ fontSize: '5rem' }} />}
           >
-            Отправить/принять с токарки
-          </СollationGradientButton> */}
+            Токарный участок
+          </TokarGradientButton>
         </Box>
 
         {/* Карточки с показателями */}
@@ -404,6 +429,7 @@ function Home() {
       <IssueInstrumentModal open={modalOpen} handleClose={handleCloseModal} />
       <WriteOffInstrumentModal open={writeOffModalOpen} handleClose={handleCloseWriteOffModal} />
       <ReturnInstrumentModal open={returnInstrumentModalOpen} handleClose={handleCloseReturnInstrumentModalModal} />
+      <ToolTransactionModal open={toolTransactionModal} handleClose={handleCloseToolTransactionModal} />
       {/* @ts-ignore */}
       <InventoryAuditComponent userId={userId} open={auditInstrumentModalOpen} handleClose={handleCloseAuditInstrumentModalModal} />
       {/* // В конце компонента добавим модальное окно: */}

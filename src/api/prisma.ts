@@ -522,7 +522,7 @@ export default class prismaInteraction {
     // Удаление  инструмента
     async delAdminInstrument(instrumentId: number) {
         console.log(instrumentId);
-        
+
         try {
             // Удаляем станок
             const deletedSector = await prisma.instrument.delete({
@@ -625,7 +625,7 @@ export default class prismaInteraction {
 
         if (type == 'issue' || type == 'return') {
 
-           
+
             // Проверяем, существует ли запись с указанным instrumentId
             const existingSummary = await prisma.instrumentSummaryWriteOffRepair.findUnique({
                 where: {
@@ -1135,57 +1135,57 @@ export default class prismaInteraction {
 
 
 
- // Получение списка инструментов для главной страницы ===========================
- async getDashboardInstrument() {
-    try {
-        const requestData = await prisma.instrument.findMany({
-            select: {
-                id: true,
-                name: true,
-                quantity: true,
+    // Получение списка инструментов для главной страницы ===========================
+    async getDashboardInstrument() {
+        try {
+            const requestData = await prisma.instrument.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    quantity: true,
 
-                drawing: {
-                    select: {
-                        id: true,
-                        name: true,
-                        filePath: true
-                    }
-                },
-                machines: {
-                    select: {
-                        machine: {
-                            select: {
-                                id: true,
-                                name: true
+                    drawing: {
+                        select: {
+                            id: true,
+                            name: true,
+                            filePath: true
+                        }
+                    },
+                    machines: {
+                        select: {
+                            machine: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
                             }
                         }
-                    }
-                },
-                toolCell: {
-                    select: {
-                        id: true,
-                        storageCellsId: true,
-                        quantity: true,
-                        storageCells: {
-                            select: {
-                                id: true,
-                                name: true
+                    },
+                    toolCell: {
+                        select: {
+                            id: true,
+                            storageCellsId: true,
+                            quantity: true,
+                            storageCells: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
                             }
                         }
-                    }
-                },
-            
-            }
-        });
+                    },
 
-        return requestData;
-    } catch (error) {
-        console.error('Ошибка при получении списка инструментов:', error);
-        throw error;
-    } finally {
-        await prisma.$disconnect();
+                }
+            });
+
+            return requestData;
+        } catch (error) {
+            console.error('Ошибка при получении списка инструментов:', error);
+            throw error;
+        } finally {
+            await prisma.$disconnect();
+        }
     }
-}
 
 
 
@@ -1235,10 +1235,10 @@ export default class prismaInteraction {
         try {
             // Шаг 1: Получаем данные из instrumentSummaryWriteOffRepair
             const writeOffRepairs = await prisma.instrumentSummaryWriteOffRepair.findMany();
-    
+
             // Шаг 2: Собираем все уникальные instrumentId
             const instrumentIds = [...new Set(writeOffRepairs.map(item => item.instrumentId))];
-    
+
             // Шаг 3: Запрашиваем данные из таблицы instrument по собранным instrumentId
             const instruments = await prisma.instrument.findMany({
                 where: {
@@ -1246,17 +1246,17 @@ export default class prismaInteraction {
                         in: instrumentIds,
                     },
                 },
-                include:{
-                    drawing:true
+                include: {
+                    drawing: true
                 }
             });
-    
+
             // Создаем объект для быстрого поиска инструментов по instrumentId
             const instrumentMap = {};
             instruments.forEach(instrument => {
                 instrumentMap[instrument.id] = instrument;
             });
-    
+
             // Шаг 4: Объединяем данные
             const responseData = writeOffRepairs.map(item => {
                 return {
@@ -1264,7 +1264,7 @@ export default class prismaInteraction {
                     instrumentDetails: instrumentMap[item.instrumentId] || null, // Добавляем детали инструмента
                 };
             });
-    
+
             return responseData;
         } catch (error) {
             console.error('Ошибка при получении списка ролей:', error);
@@ -1376,12 +1376,12 @@ export default class prismaInteraction {
 
 
     }
-    async  PutInventoryAudit(data) {
+    async PutInventoryAudit(data) {
         try {
             if (!Array.isArray(data)) {
                 throw new Error('Ожидался массив данных');
             }
-    
+
             // Обновляем все записи параллельно и возвращаем обновленные элементы
             const updatedItems = await Promise.all(
                 data.map(items =>
@@ -1394,19 +1394,19 @@ export default class prismaInteraction {
                     })
                 )
             );
-    
+
             return updatedItems; // 🔹 Теперь функция возвращает обновленные записи
-    
+
         } catch (error) {
             console.error('Ошибка при обновлении записей сверки:', error);
             throw error;
         }
     }
-    async  CompleteInventoryAudit(data) {
+    async CompleteInventoryAudit(data) {
         try {
-           console.log(data);
-           
-    
+            console.log(data);
+
+
             // Обновляем все записи параллельно
             const updatedItems = await Promise.all(
                 data.auditItems.map(items =>
@@ -1421,7 +1421,7 @@ export default class prismaInteraction {
                     })
                 )
             );
-    
+
             // Обновляем запись сверки после обновления элементов
             const updatedAudit = await prisma.inventoryAudit.update({
                 where: { id: data.auditItems[0].auditId },  // Берем auditId из первого элемента
@@ -1430,16 +1430,164 @@ export default class prismaInteraction {
                     status: 'completed',
                 },
             });
-    
+
             return { updatedItems, updatedAudit }; // Возвращаем обновленные записи
-    
+
         } catch (error) {
             console.error('Ошибка при обновлении записей сверки:', error);
             throw error;
         }
     }
+
+
+
+    // Отправка инструмента в токарку
+    async createInstrumentTransactionTurner(data) {
+        // ТИпы операций
+        // issue - выдача инструмента
+        // return - возврат на баланс
+        // returnedInWrittenOff - возврат на списание
+        // sendWriteOff - Отправить на списание
+        // write_off - списание со склада
+        // repair - списание инструмента который подготовлен к списанию
+
+        const {
+            instrumentId,
+            type,
+            quantity,
+            issuedTo,
+            sectionId,
+            machineId,
+            userId,
+            transactionType,
+            storageCells,
+            status, // Новый параметр: статус инструмента
+        } = data;
+
+        try {
+
+            // Создаем запись о движении инструмента
+            const transaction = await prisma.instrumentTransaction.create({
+                data: {
+                    instrumentId,
+                    type,
+                    quantity,
+                    issuedTo,
+                    sectionId,
+                    machineId,
+                    userId,
+                    transactionType,
+                    status: type === 'issue' ? status : null, // Передаем статус только при выдаче
+                    createdAt: new Date(),
+                },
+            });
+
+
+
+            // Обновляем количество инструментов в ячейках хранения и удаляем связь, если количество равно нулю
+            for (const cell of storageCells) {
+                const { id: storageCellId, quantity: cellQuantity } = cell;
+
+                const toolCell = await prisma.toolCell.findUnique({
+                    where: {
+                        instrumentId_storageCellsId: {
+                            instrumentId,
+                            storageCellsId: storageCellId,
+                        },
+                    },
+                });
+
+
+                const newQuantity = type === 'sendToLathe' && toolCell.quantity - cellQuantity
+                await prisma.toolCell.update({
+                    where: { id: toolCell.id },
+                    data: { quantity: newQuantity },
+                });
+
+                // Если количество равно нулю, удаляем запись
+                if (newQuantity === 0) {
+                    await prisma.toolCell.delete({
+                        where: { id: toolCell.id },
+                    });
+                }
+
+            }
+
+
+            // Уменьшаем общее количество инструмента в таблице Instrument с помощью decrement
+            await prisma.instrument.update({
+                where: { id: instrumentId },
+                data: {
+                    quantity: {
+                        decrement: quantity, // Уменьшаем quantity на указанное количество
+                    },
+                },
+            });
+
+            // Работа с таблицей InstrumentTurner:
+            // Если операция отправки в токарку, проверяем наличие записи для данного инструмента.
+            // Если запись отсутствует – создаем её, если есть – прибавляем новое количество.
+            if (type === 'sendToLathe') {
+                await prisma.instrumentTurner.upsert({
+                    where: { instrumentId },
+                    update: { totalTurner: { increment: quantity } },
+                    create: { instrumentId, totalTurner: quantity },
+                });
+            }
+
+
+            return transaction;
+        } catch (error) {
+            console.error('Ошибка при создании транзакции:', error);
+            throw new Error(error.message || 'Не удалось создать транзакцию');
+        }
+    }
+
+     // Получение списка инструмента в токарке ===========================
+     async getTurner() {
+        try {
+            const requestData = await prisma.instrumentTurner.findMany({
+                select: {
+                    id: true,
+                    instrumentId: true,
+                    totalTurner: true,
+
+                    instrument: {
+                        select: {
+                            id: true,
+                            name: true,
+                            toolCell: {
+                                select: {
+                                    id: true,
+                                    storageCellsId: true,
+                                    quantity: true,
+                                    storageCells: {
+                                        select: {
+                                            id: true,
+                                            name: true
+                                        }
+                                    }
+                                }
+                            },
+                        },
+                        
     
-    
+                    },
+                   
+
+                }
+            });
+
+            return requestData;
+        } catch (error) {
+            console.error('Ошибка при получении списка инструментов на токарном участке:', error);
+            throw error;
+        } finally {
+            await prisma.$disconnect();
+        }
+    }
+
+
 }
 
 
