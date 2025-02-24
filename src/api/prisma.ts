@@ -1543,8 +1543,287 @@ export default class prismaInteraction {
         }
     }
 
-     // Получение списка инструмента в токарке ===========================
-     async getTurner() {
+    // Возврат инструмента с токарки
+    async instrumentTransactionTurner(instrumentData) {
+        // ТИпы операций
+        // issue - выдача инструмента
+        // return - возврат на баланс
+        // returnedInWrittenOff - возврат на списание
+        // sendWriteOff - Отправить на списание
+        // write_off - списание со склада
+        // repair - списание инструмента который подготовлен к списанию
+
+        const {
+            // instrumentId,
+            turnerId,
+            turnerInstrumentId,
+            existingInstrumentId,
+            type,
+            quantity,
+            issuedTo,
+            sectionId,
+            machineId,
+            userId,
+            transactionType,
+            storageCells,
+            status, // Новый параметр: статус инструмента
+        } = instrumentData;
+        console.log(instrumentData);
+
+
+        try {
+
+            if (type == 'simpleReturn') {
+                // Создаем запись о движении инструмента
+                const transaction = await prisma.instrumentTransaction.create({
+                    data: {
+                        instrumentId: turnerInstrumentId,
+                        type,
+                        quantity,
+                        issuedTo,
+                        sectionId,
+                        machineId,
+                        userId,
+                        transactionType,
+                        status: type === 'issue' ? status : null, // Передаем статус только при выдаче
+                        createdAt: new Date(),
+                    },
+                });
+
+                // Работа с таблицей InstrumentTurner:
+                // Если операция отправки в токарку, проверяем наличие записи для данного инструмента.
+                // Если запись отсутствует – создаем её, если есть – Уменьшаем на новое количество.
+                if (type === 'simpleReturn') {
+                    await prisma.instrumentTurner.update({
+                        where: { id: turnerId },
+                        data: {
+                            totalTurner: {
+                                decrement: quantity, // Увеличиваем quantity на указанное количество
+                            },
+                        },
+                    });
+                }
+                // // Увеличиваем общее количество инструмента в таблице Instrument 
+                await prisma.instrument.update({
+                    where: { id: turnerInstrumentId },
+                    data: {
+                        quantity: {
+                            increment: quantity, // Увеличиваем quantity на указанное количество
+                        },
+                    },
+                });
+
+                // // Обновляем количество инструментов в ячейках хранения и удаляем связь, если количество равно нулю
+                for (const cell of storageCells) {
+                    const { id: storageCellId, quantity: cellQuantity } = cell;
+
+                    const toolCell = await prisma.toolCell.findUnique({
+                        where: {
+                            instrumentId_storageCellsId: {
+                                instrumentId: turnerInstrumentId,
+                                storageCellsId: storageCellId,
+                            },
+                        },
+                    });
+
+
+                    const newQuantity = type === 'simpleReturn' && toolCell.quantity + cellQuantity
+                    await prisma.toolCell.update({
+                        where: { id: toolCell.id },
+                        data: { quantity: newQuantity },
+                    });
+                }
+
+                return transaction;
+            } else if (type == 'instrumentChange') {
+                // Создаем запись о движении инструмента
+                const transaction = await prisma.instrumentTransaction.create({
+                    data: {
+                        instrumentId: turnerInstrumentId,
+                        type,
+                        quantity,
+                        issuedTo,
+                        sectionId,
+                        machineId,
+                        userId,
+                        transactionType,
+                        status: type === 'issue' ? status : null, // Передаем статус только при выдаче
+                        createdAt: new Date(),
+                    },
+                });
+
+                // Работа с таблицей InstrumentTurner:
+                // Если операция отправки в токарку, проверяем наличие записи для данного инструмента.
+                // Если запись отсутствует – создаем её, если есть – Уменьшаем на новое количество.
+                if (type === 'instrumentChange') {
+                    await prisma.instrumentTurner.update({
+                        where: { id: turnerId },
+                        data: {
+                            totalTurner: {
+                                decrement: quantity, // Увеличиваем quantity на указанное количество
+                            },
+                        },
+                    });
+                }
+                // // Увеличиваем общее количество инструмента в таблице Instrument 
+                await prisma.instrument.update({
+                    where: { id: existingInstrumentId },
+                    data: {
+                        quantity: {
+                            increment: quantity, // Увеличиваем quantity на указанное количество
+                        },
+                    },
+                });
+
+                // // Обновляем количество инструментов в ячейках хранения и удаляем связь, если количество равно нулю
+                for (const cell of storageCells) {
+                    const { id: storageCellId, quantity: cellQuantity } = cell;
+
+                    const toolCell = await prisma.toolCell.findUnique({
+                        where: {
+                            instrumentId_storageCellsId: {
+                                instrumentId: existingInstrumentId,
+                                storageCellsId: storageCellId,
+                            },
+                        },
+                    });
+
+
+                    const newQuantity = type === 'instrumentChange' && toolCell.quantity + cellQuantity
+                    await prisma.toolCell.update({
+                        where: { id: toolCell.id },
+                        data: { quantity: newQuantity },
+                    });
+                    return transaction;
+                }
+            }
+
+        } catch (error) {
+            console.error('Ошибка при создании транзакции:', error);
+            throw new Error(error.message || 'Не удалось создать транзакцию');
+        }
+    }
+
+    async createInstrumentTransactionTurnerNew(data: any) {
+        try {
+            // console.log('Данные для создания инструмента:', {
+            //     name: data.name,
+            //     type: data.type,
+            //     userId: data.userId,
+            //     quantity: data.quantity,
+            //     storageCellsData: data.storageCellsData,
+            //     machineIds: data.machineIds,
+            //     file: data.file,
+            // });
+
+            //             name: 'Тест123',
+            //   transactionType: 'turner',
+            //   type: 'newInstrument',
+            //   turnerId: 4,
+            //   turnerInstrumentId: 14,
+            //   existingInstrumentId: 0,
+            //   userId: 1,
+            //   quantity: 20,
+            //   storageCells: [ { id: 1, quantity: 20 } ],
+            //   machineIds: [ 1, 3 ],
+            //   file: { name: 'ceh.jpg', filePath: '/uploads/drawings/ceh.jpg' }
+
+            // Проверка наличия необходимых полей
+            if (!data.name || !data.storageCells || !data.machineIds) {
+                throw new Error('Некорректные данные для создания инструмента');
+            }
+
+            const transaction = await prisma.instrumentTransaction.create({
+                data: {
+                    instrumentId: data.turnerInstrumentId,
+                    type: data.type,
+                    quantity: data.quantity,
+                    userId: data.userId,
+                    transactionType: data.transactionType,
+                    status: data.type === 'issue' ? status : null, // Передаем статус только при выдаче
+                    createdAt: new Date(),
+                },
+            });
+
+            await prisma.instrumentTurner.update({
+                where: { id: data.turnerId },
+                data: {
+                    totalTurner: {
+                        decrement: data.quantity, // Уменьшаем quantity на указанное количество
+                    },
+                },
+            });
+
+
+
+            // Создание инструмента
+            const newInstrument = await prisma.instrument.create({
+                data: {
+                    name: data.name,
+                    quantity: data.quantity, // Установка общего количества
+                    machines: {
+                        create: data.machineIds.map((machineId: number) => ({
+                            machine: { connect: { id: machineId } },
+                        })),
+                    },
+                    toolCell: {
+                        create: data.storageCells.map((cell: { id: number; quantity: number }) => ({
+                            storageCells: { connect: { id: cell.id } },
+                            quantity: cell.quantity,
+                        })),
+                    },
+                    drawing: data.file ? {
+                        create: {
+                            name: data.file.name,
+                            filePath: data.file.filePath,
+                        },
+                    } : undefined,
+                },
+                include: {
+                    toolCell: {
+                        include: {
+                            storageCells: true,
+                        },
+                    },
+                    machines: {
+                        include: {
+                            machine: true,
+                        },
+                    },
+                    drawing: true,
+                },
+            });
+
+            // Получаем ID созданного инструмента
+            const instrumentId = newInstrument.id;
+            console.log(instrumentId);
+
+
+            // Создание записи в таблице InstrumentTransaction
+            await prisma.instrumentTransaction.create({
+                data: {
+                    instrumentId: instrumentId, // Ссылка на созданный инструмент
+                    type: "receipt", // Тип операции: приход
+                    transactionType: 'turnerNew',
+                    quantity: data.quantity, // Общее количество инструментов
+                    status: "new", // Статус инструмента: новый
+                    userId: data.userId, // Ссылка на пользователя, который выполнил операцию
+                    createdAt: new Date(), // Дата и время операции
+                },
+            });
+
+            return newInstrument;
+        } catch (error) {
+            console.error('Ошибка при добавлении инструмента:', error);
+            throw error;
+        } finally {
+            await prisma.$disconnect();
+        }
+    }
+
+
+    // Получение списка инструмента в токарке ===========================
+    async getTurner() {
         try {
             const requestData = await prisma.instrumentTurner.findMany({
                 select: {
@@ -1570,10 +1849,10 @@ export default class prismaInteraction {
                                 }
                             },
                         },
-                        
-    
+
+
                     },
-                   
+
 
                 }
             });
