@@ -85,8 +85,8 @@ const LatheToolMovementModal = ({ open, handleClose }) => {
     }
   }, [open]);
   useEffect(() => {
-  console.log(additionalCells);
-  
+    console.log(additionalCells);
+
   }, [additionalCells]);
 
   const fetchData = async () => {
@@ -425,7 +425,7 @@ const LatheToolMovementModal = ({ open, handleClose }) => {
             <>
               <Grid item xs={12}>
                 <Autocomplete
-                  options={turnerInstruments}
+                  options={turnerInstruments.filter(item => item.totalTurner > 0)}
                   getOptionLabel={(option) => option.instrument.name}
                   value={selectedTurnerInstrument}
                   onChange={(_, newValue) => setSelectedTurnerInstrument(newValue)}
@@ -598,7 +598,7 @@ const LatheToolMovementModal = ({ open, handleClose }) => {
                                 id: c.id,
                                 quantity: 0,
                                 storageCell: c,
-                                name:c.name
+                                name: c.name
                               })))}
                               renderInput={(params) => (
                                 <TextField
@@ -629,12 +629,16 @@ const LatheToolMovementModal = ({ open, handleClose }) => {
                               />
                             </Grid>
                           ))}
-                          <Input
-                            type="file"
-                            inputProps={{ accept: 'application/pdf' }}
-                            onChange={(e) => setFile(e.target.files?.[0] || null)}
-                            sx={{ mt: 2 }}
-                        />
+
+                          {balanceOption === 'newInstrument' &&
+                            <Input
+                              type="file"
+                              inputProps={{ accept: 'application/pdf' }}
+                              onChange={(e) => setFile(e.target.files?.[0] || null)}
+                              sx={{ mt: 2 }}
+                            />
+                          }
+
                         </>
                       ) : (
                         <>
@@ -663,7 +667,7 @@ const LatheToolMovementModal = ({ open, handleClose }) => {
                                 id: c.id,
                                 quantity: 0,
                                 storageCell: c,
-                                name:c.name
+                                name: c.name
                               })))}
                               renderInput={(params) => (
                                 <TextField

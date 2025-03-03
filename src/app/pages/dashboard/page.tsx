@@ -285,7 +285,7 @@ function Home() {
             onClick={handleOpenModal}
             startIcon={<InventoryIcon />}
           >
-            Выдать/принять инструмент
+            Выдача/возврат инструмента
           </PrimaryGradientButton>
 
           <SecondaryGradientButton

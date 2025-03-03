@@ -68,6 +68,8 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
     const [selectedInstrument, setSelectedInstrument] = React.useState<Instrument | null>(null);
     const [operationType, setOperationType] = React.useState<'write_off' | 'repair'>('write_off'); // Тип операции
     const [quarantineCell, setQuarantineCell] = React.useState<QuarantineCell | null>(null); // Ячейка "Карантин"
+    // Новый стейт для хранения всех ячеек "Карантин"
+    const [allQuarantineCells, setAllQuarantineCells] = React.useState<QuarantineCell[]>([]);
 
     React.useEffect(() => {
         const storedToken = localStorage.getItem('token');
@@ -87,11 +89,22 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
             fetchInstruments();
             // Загружаем данные для ячейки "Карантин" (пример)
             fetchQuarantineCell();
+            fetchAllQuarantineCells();
         } else {
             // Сбрасываем Snackbar при закрытии модального окна
             setSnackbar({ open: false, message: '', severity: 'success' });
         }
     }, [open]);
+
+    // Новый useEffect для загрузки всех ячеек "Карантин" при выборе операции "repair"
+    React.useEffect(() => {
+        if (operationType === 'repair') {
+            fetchAllQuarantineCells();
+            console.log("Запрос отправлен1");
+        }
+        console.log("Запрос отправлен");
+        
+    }, [operationType]);
 
     const fetchInstruments = async () => {
         try {
@@ -102,7 +115,17 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
         }
     };
 
-    // Загрузка данных для ячейки "Карантин"
+    // Функция для загрузки всех ячеек "Карантин"
+    const fetchAllQuarantineCells = async () => {
+        try {
+            const response = await axios.get('/api/quarantineCell');
+            setAllQuarantineCells(response.data);
+        } catch (error) {
+            console.error('Ошибка при загрузке всех ячеек "Карантин":', error);
+        }
+    };
+
+    // Загрузка данных для ячейки "Карантин" для выбранного инструмента
     const fetchQuarantineCell = async () => {
         try {
             const response = await axios.get('/api/quarantineCell');
@@ -198,7 +221,13 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
                     </RadioGroup>
                 </FormControl>
                 <Autocomplete
-                    options={instruments}
+                    // Если выбрана операция "repair", фильтруем список по totalReturnedInWrittenOff > 0
+                    options={operationType === 'repair'
+                        ? instruments.filter((inst) => {
+                              const quarantine = allQuarantineCells.find((q) => q.instrumentId === inst.id);
+                              return quarantine && quarantine.totalReturnedInWrittenOff > 0;
+                          })
+                        : instruments}
                     getOptionLabel={(option) => option.name}
                     value={selectedInstrument}
                     onChange={(event, newValue) => setSelectedInstrument(newValue)}
@@ -274,8 +303,7 @@ const WriteOffInstrumentModal = ({ open, handleClose }: WriteOffInstrumentModalP
                                                 : ''
                                         }
                                         sx={{
-                                            width: '15%', // Увеличиваем ширину поля
-                                            
+                                            width: '15%',
                                         }}
                                     />
                                 </Box>

@@ -385,10 +385,10 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
                                 {selectedInstrument.toolCell.map((cell) => (
                                     <Box key={cell.storageCellsId} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                                         <Typography variant="body1">
-                                            {cell.storageCells.name} (Доступно: {cell.quantity})
+                                            {cell.storageCells.name} 
                                         </Typography>
                                         <TextField
-                                            label={`Количество для ${operationType === 'receive' ? 'получения' : 'возврата из ремонта'}`}
+                                            label={`Количество для размещения в ячейку'}`}
                                             variant="outlined"
                                             type="number"
                                             value={quantities[cell.storageCellsId] ?? ''}
@@ -426,7 +426,7 @@ const ToolModal = ({ open, handleClose }: ToolModalProps) => {
                                                 setNewSelectedCells(newValue);
                                             }}
                                             renderInput={(params) => (
-                                                <TextField {...params} label="Выберите ячейки для размещения" />
+                                                <TextField {...params} label="Выберите дополнительные ячейки для размещения" />
                                             )}
                                             sx={{ mt: 2 }}
                                         />
