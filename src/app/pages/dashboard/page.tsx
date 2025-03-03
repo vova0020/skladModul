@@ -12,7 +12,6 @@ import Button from '@mui/material/Button';
 import Navbar from '@/app/components/navbar';
 import { styled } from '@mui/system';
 
-// Иконки для кнопок
 import InventoryIcon from '@mui/icons-material/Inventory';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -26,7 +25,6 @@ import ReturnInstrumentModal from '@/app/components/modalOkna/ReturnInstrumentMo
 import InventoryAuditComponent from '@/app/components/modalOkna/InventoryAuditComponent';
 import { jwtDecode } from 'jwt-decode';
 import InstrumentDetailsModal from '@/app/components/dashboardModal/InstrumentDetailsModal';
-
 import IssuedInstrumentDetailsModal from '@/app/components/dashboardModal/IssuedInstrumentDetailsModal';
 import ReturnedInWriteOffInstrumentDetailsModal from '@/app/components/dashboardModal/ReturnedInWriteOffInstrumentDetailsModal';
 import WrittenOffInstrumentDetailsModal from '@/app/components/dashboardModal/WrittenOffInstrumentDetailsModal';
@@ -34,13 +32,14 @@ import withAuth from '@/app/components/withAuth';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import ToolTransactionModal from '@/app/components/modalOkna/ToolTransactionModal';
 
+// ---------- Стили кнопок ----------
 
 // Основной цвет: глубокий синий (#1A73E8)
 const PrimaryGradientButton = styled(Button)(({ theme }) => ({
   background: 'linear-gradient(45deg, #1A73E8 30%, #4285F4 90%)',
   padding: '8px',
   color: 'white',
-  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  width: '100%', // На самых маленьких экранах - на всю ширину
   height: '70px',
   borderRadius: '10px',
   boxShadow: '0 3px 5px 2px rgba(26, 115, 232, .3)',
@@ -49,8 +48,9 @@ const PrimaryGradientButton = styled(Button)(({ theme }) => ({
     transform: 'scale(1.05)',
     boxShadow: '0 5px 7px 3px rgba(26, 115, 232, .4)',
   },
+  // Начиная с экрана 'sm' (~600px) — фиксированная ширина 200px
   [theme.breakpoints.up('sm')]: {
-    width: '200px', // На планшетах и ПК фиксированная ширина
+    width: '200px',
   },
 }));
 
@@ -59,7 +59,7 @@ const SecondaryGradientButton = styled(Button)(({ theme }) => ({
   background: 'linear-gradient(45deg, #5F6368 30%, #80868B 90%)',
   padding: '8px',
   color: 'white',
-  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  width: '100%',
   height: '70px',
   borderRadius: '10px',
   boxShadow: '0 3px 5px 2px rgba(95, 99, 104, .3)',
@@ -69,7 +69,7 @@ const SecondaryGradientButton = styled(Button)(({ theme }) => ({
     boxShadow: '0 5px 7px 3px rgba(95, 99, 104, .4)',
   },
   [theme.breakpoints.up('sm')]: {
-    width: '200px', // На планшетах и ПК фиксированная ширина
+    width: '200px',
   },
 }));
 
@@ -78,7 +78,7 @@ const ErrorGradientButton = styled(Button)(({ theme }) => ({
   background: 'linear-gradient(45deg, #EA4335 30%, #FBBC05 90%)',
   padding: '8px',
   color: 'white',
-  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  width: '100%',
   height: '70px',
   borderRadius: '10px',
   boxShadow: '0 3px 5px 2px rgba(234, 67, 53, .3)',
@@ -88,16 +88,16 @@ const ErrorGradientButton = styled(Button)(({ theme }) => ({
     boxShadow: '0 5px 7px 3px rgba(234, 67, 53, .4)',
   },
   [theme.breakpoints.up('sm')]: {
-    width: '200px', // На планшетах и ПК фиксированная ширина
+    width: '200px',
   },
 }));
 
-// Цвет сверки: зеленый (#EA4335)
+// Сверка: зеленый
 const СollationGradientButton = styled(Button)(({ theme }) => ({
   background: 'linear-gradient(45deg,rgb(28, 190, 4) 30%,rgb(116, 224, 8) 90%)',
   padding: '8px',
   color: 'white',
-  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  width: '100%',
   height: '70px',
   borderRadius: '10px',
   boxShadow: '0 3px 5px 2px rgba(234, 67, 53, .3)',
@@ -107,16 +107,16 @@ const СollationGradientButton = styled(Button)(({ theme }) => ({
     boxShadow: '0 5px 7px 3px rgba(234, 67, 53, .4)',
   },
   [theme.breakpoints.up('sm')]: {
-    width: '200px', // На планшетах и ПК фиксированная ширина
+    width: '200px',
   },
 }));
 
-// Цвет сверки: желтый (#EA4335)
+// Токарный участок: желтый
 const TokarGradientButton = styled(Button)(({ theme }) => ({
   background: 'linear-gradient(45deg,rgb(246, 207, 12) 30%,rgb(180, 192, 106) 90%)',
   padding: '8px',
   color: 'white',
-  width: '100%', // На мобильных устройствах кнопки занимают всю ширину
+  width: '100%',
   height: '70px',
   borderRadius: '10px',
   boxShadow: '0 3px 5px 2px rgba(234, 67, 53, .3)',
@@ -126,37 +126,32 @@ const TokarGradientButton = styled(Button)(({ theme }) => ({
     boxShadow: '0 5px 7px 3px rgba(234, 67, 53, .4)',
   },
   [theme.breakpoints.up('sm')]: {
-    width: '200px', // На планшетах и ПК фиксированная ширина
+    width: '200px',
   },
 }));
 
 function Home() {
   const [modalOpen, setModalOpen] = useState(false);
-
   const handleOpenModal = () => setModalOpen(true);
   const handleCloseModal = () => setModalOpen(false);
 
   const [writeOffModalOpen, setWriteOffModalOpen] = useState(false);
-
   const handleOpenWriteOffModal = () => setWriteOffModalOpen(true);
   const handleCloseWriteOffModal = () => setWriteOffModalOpen(false);
 
   const [returnInstrumentModalOpen, setReturnInstrumentModalOpen] = useState(false);
-
   const handleOpenReturnInstrumentModalModal = () => setReturnInstrumentModalOpen(true);
   const handleCloseReturnInstrumentModalModal = () => setReturnInstrumentModalOpen(false);
 
   const [auditInstrumentModalOpen, setAuditInstrumentModalOpen] = useState(false);
-
   const handleOpenAuditInstrumentModalModal = () => setAuditInstrumentModalOpen(true);
   const handleCloseAuditInstrumentModalModal = () => setAuditInstrumentModalOpen(false);
 
   const [toolTransactionModal, setToolTransactionModal] = useState(false);
-
   const handleOpenToolTransactionModal = () => setToolTransactionModal(true);
   const handleCloseToolTransactionModal = () => setToolTransactionModal(false);
 
-  // В компоненте Home добавим состояние для модального окна
+  // Модалки для деталей
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [returnedInwriteOffDetailsModalOpen, setReturnedInWriteOffDetailsModalOpen] = useState(false);
   const [issuedDetailsModalOpen, setIssuedDetailsModalOpen] = useState(false);
@@ -166,11 +161,11 @@ function Home() {
   const [instruments, setInstruments] = useState([]);
   const [storageSummary, setStorageSummary] = useState([]);
 
-  // Посчитанные данные для отображения
   const [totalInstruments, setTotalInstruments] = useState(0);
   const [reparuedInstruments, setreparuedInstruments] = useState(0);
   const [issuedInstruments, setIssuedInstruments] = useState(0);
   const [writtenOffInstruments, setWittenOffInstruments] = useState(0);
+
   const [token, setToken] = React.useState<string | null>(null);
   const [userId, setUserId] = React.useState<number | null>(null);
 
@@ -187,31 +182,24 @@ function Home() {
     }
   }, []);
 
-
   React.useEffect(() => {
     getInstruments();
   }, []);
 
   React.useMemo(() => {
     const intervalId = setInterval(() => {
-      getInstruments(); // Обновляем данные
-    }, 8000); // Обновляем каждые 8 секунд
-
-    // Очищаем интервал при размонтировании компонента
+      getInstruments(); // Обновляем данные каждые 8 секунд
+    }, 8000);
     return () => clearInterval(intervalId);
   }, []);
 
   const getInstruments = async () => {
     try {
       const response = await axios.get('/api/dashboardApi/getAllInstrument');
-      // @ts-ignore
       setInstruments(response.data.sort((a, b) => a.id - b.id));
-      // console.log(response.data)
-      const response3 = await axios.get('/api/dashboardApi/getAllSpisanieIsse');// @ts-ignore
+
+      const response3 = await axios.get('/api/dashboardApi/getAllSpisanieIsse');
       setStorageSummary(response3.data.sort((a, b) => a.id - b.id));
-      // console.log(response3.data);
-
-
     } catch (error) {
       showSnackbar('Ошибка загрузки данных.', 'error');
     }
@@ -221,53 +209,69 @@ function Home() {
     setSnackbar({ open: true, message, severity });
   };
 
-
   React.useMemo(() => {
-    let totalInstrumentsSumm = 0
-    let reparuedInstrumentsSumm = 0
-    let issuedInstrumentsSumm = 0
-    let writtenOffInstrumentsSumm = 0
+    let totalInstrumentsSumm = 0;
+    let reparuedInstrumentsSumm = 0;
+    let issuedInstrumentsSumm = 0;
+    let writtenOffInstrumentsSumm = 0;
+
     for (const instrument of instruments) {
-      // @ts-ignore
-      totalInstrumentsSumm = totalInstrumentsSumm + instrument.quantity
+      totalInstrumentsSumm += instrument.quantity;
     }
     for (const storageSumm of storageSummary) {
-      // @ts-ignore
-      reparuedInstrumentsSumm = reparuedInstrumentsSumm + storageSumm.totalReturnedInWrittenOff
-      // @ts-ignore
-      issuedInstrumentsSumm = issuedInstrumentsSumm + storageSumm.totalIssuedCeh
-      // @ts-ignore
-      writtenOffInstrumentsSumm = writtenOffInstrumentsSumm + storageSumm.totalWrittenOff
+      reparuedInstrumentsSumm += storageSumm.totalReturnedInWrittenOff;
+      issuedInstrumentsSumm += storageSumm.totalIssuedCeh;
+      writtenOffInstrumentsSumm += storageSumm.totalWrittenOff;
     }
 
-    setTotalInstruments(totalInstrumentsSumm)
-    setreparuedInstruments(reparuedInstrumentsSumm)
-    setIssuedInstruments(issuedInstrumentsSumm)
-    setWittenOffInstruments(writtenOffInstrumentsSumm)
-
+    setTotalInstruments(totalInstrumentsSumm);
+    setreparuedInstruments(reparuedInstrumentsSumm);
+    setIssuedInstruments(issuedInstrumentsSumm);
+    setWittenOffInstruments(writtenOffInstrumentsSumm);
   }, [instruments, storageSummary]);
-
 
   return (
     <div>
       <Navbar />
 
-      <Box sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, backgroundColor: '#F5F5F5', minHeight: '100vh' }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4, fontWeight: 'bold', color: '#1A73E8', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          width: '100%',
+          p: { xs: 2, sm: 3 },
+          backgroundColor: '#F5F5F5',
+          minHeight: '100vh',
+        }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          gutterBottom
+          align="center"
+          sx={{
+            mb: 4,
+            fontWeight: 'bold',
+            color: '#1A73E8',
+            fontSize: { xs: '1.5rem', sm: '2rem' },
+          }}
+        >
           Главная страница
         </Typography>
 
-        {/* Кнопки для операций */}
+        {/* БЛОК КНОПОК */}
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' }, // На мобильных устройствах вертикально, на планшетах и ПК горизонтально
+            flexDirection: { xs: 'column', sm: 'row' },
+            flexWrap: 'wrap',
             justifyContent: 'center',
+            alignItems: 'center',
             gap: 2,
             mb: 6,
             width: '100%',
-            maxWidth: '800px',
-            mx: 'auto', // Центрирование кнопок
+            // На мобильных - 100%, начиная с md - 800px
+            maxWidth: { xs: '100%', md: '800px' },
+            mx: 'auto',
           }}
         >
           <PrimaryGradientButton
@@ -293,6 +297,7 @@ function Home() {
           >
             Списать инструмент
           </ErrorGradientButton>
+
           <СollationGradientButton
             variant="contained"
             onClick={handleOpenAuditInstrumentModalModal}
@@ -310,10 +315,21 @@ function Home() {
           </TokarGradientButton>
         </Box>
 
-        {/* Карточки с показателями */}
-        <Grid container spacing={3} justifyContent="center" sx={{ maxWidth: '1200px', mx: 'auto', p: { xs: 1, sm: 2 } }}>
-          {/* Карточка: Общее количество инструментов */}
-          {/* // Обновим карточку "Количество на складе годных": */}
+        {/* КАРТОЧКИ С ПОКАЗАТЕЛЯМИ */}
+        <Grid
+          container
+          spacing={3}
+          justifyContent="center"
+          alignItems="center"
+          sx={{
+            width: '100%',
+            // На мобильных 100%, на больших - 1200px
+            maxWidth: { xs: '100%', md: '1200px' },
+            mx: 'auto',
+            p: { xs: 1, sm: 2 },
+          }}
+        >
+          {/* Количество на складе годных */}
           <Grid item xs={12} sm={6} md={3}>
             <Card
               sx={{
@@ -331,18 +347,34 @@ function Home() {
               onClick={() => setDetailsModalOpen(true)}
             >
               <CardContent>
-                <Typography variant="h6" component="div" gutterBottom align="center" sx={{ color: '#5F6368', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                <Typography
+                  variant="h6"
+                  component="div"
+                  gutterBottom
+                  align="center"
+                  sx={{
+                    color: '#5F6368',
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                  }}
+                >
                   Количество на складе годных
                 </Typography>
-                <Typography variant="h4" color="primary" align="center" sx={{ fontWeight: 'bold', color: '#1A73E8', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                <Typography
+                  variant="h4"
+                  align="center"
+                  sx={{
+                    fontWeight: 'bold',
+                    color: '#1A73E8',
+                    fontSize: { xs: '1.5rem', sm: '2rem' },
+                  }}
+                >
                   {totalInstruments}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
 
-
-          {/* Карточка: Выдано инструментов */}
+          {/* Количество на складе на списание */}
           <Grid item xs={12} sm={6} md={3}>
             <Card
               sx={{
@@ -359,17 +391,34 @@ function Home() {
               onClick={() => setReturnedInWriteOffDetailsModalOpen(true)}
             >
               <CardContent>
-                <Typography variant="h6" component="div" gutterBottom align="center" sx={{ color: '#5F6368', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                <Typography
+                  variant="h6"
+                  component="div"
+                  gutterBottom
+                  align="center"
+                  sx={{
+                    color: '#5F6368',
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                  }}
+                >
                   Количество на складе на списание
                 </Typography>
-                <Typography variant="h4" color="secondary" align="center" sx={{ fontWeight: 'bold', color: '#1A73E8', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                <Typography
+                  variant="h4"
+                  align="center"
+                  sx={{
+                    fontWeight: 'bold',
+                    color: '#1A73E8',
+                    fontSize: { xs: '1.5rem', sm: '2rem' },
+                  }}
+                >
                   {reparuedInstruments}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Карточка: Возвращено инструментов */}
+          {/* Количество в цеху */}
           <Grid item xs={12} sm={6} md={3}>
             <Card
               sx={{
@@ -386,17 +435,34 @@ function Home() {
               onClick={() => setIssuedDetailsModalOpen(true)}
             >
               <CardContent>
-                <Typography variant="h6" component="div" gutterBottom align="center" sx={{ color: '#5F6368', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                <Typography
+                  variant="h6"
+                  component="div"
+                  gutterBottom
+                  align="center"
+                  sx={{
+                    color: '#5F6368',
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                  }}
+                >
                   Количество в цеху
                 </Typography>
-                <Typography variant="h4" color="success.main" align="center" sx={{ fontWeight: 'bold', color: '#34A853', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                <Typography
+                  variant="h4"
+                  align="center"
+                  sx={{
+                    fontWeight: 'bold',
+                    color: '#34A853', // зеленый
+                    fontSize: { xs: '1.5rem', sm: '2rem' },
+                  }}
+                >
                   {issuedInstruments}
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Карточка: Списано инструментов */}
+          {/* Списано */}
           <Grid item xs={12} sm={6} md={3}>
             <Card
               sx={{
@@ -413,10 +479,27 @@ function Home() {
               onClick={() => setWriteOffDetailsModalOpen(true)}
             >
               <CardContent>
-                <Typography variant="h6" component="div" gutterBottom align="center" sx={{ color: '#5F6368', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                <Typography
+                  variant="h6"
+                  component="div"
+                  gutterBottom
+                  align="center"
+                  sx={{
+                    color: '#5F6368',
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                  }}
+                >
                   Списано
                 </Typography>
-                <Typography variant="h4" color="error.main" align="center" sx={{ fontWeight: 'bold', color: '#EA4335', fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                <Typography
+                  variant="h4"
+                  align="center"
+                  sx={{
+                    fontWeight: 'bold',
+                    color: '#EA4335',
+                    fontSize: { xs: '1.5rem', sm: '2rem' },
+                  }}
+                >
                   {writtenOffInstruments}
                 </Typography>
               </CardContent>
@@ -425,30 +508,40 @@ function Home() {
         </Grid>
       </Box>
 
-
+      {/* Модалки */}
       <IssueInstrumentModal open={modalOpen} handleClose={handleCloseModal} />
       <WriteOffInstrumentModal open={writeOffModalOpen} handleClose={handleCloseWriteOffModal} />
-      <ReturnInstrumentModal open={returnInstrumentModalOpen} handleClose={handleCloseReturnInstrumentModalModal} />
-      <ToolTransactionModal open={toolTransactionModal} handleClose={handleCloseToolTransactionModal} />
-      {/* @ts-ignore */}
-      <InventoryAuditComponent userId={userId} open={auditInstrumentModalOpen} handleClose={handleCloseAuditInstrumentModalModal} />
-      {/* // В конце компонента добавим модальное окно: */}
+      <ReturnInstrumentModal
+        open={returnInstrumentModalOpen}
+        handleClose={handleCloseReturnInstrumentModalModal}
+      />
+      <ToolTransactionModal
+        open={toolTransactionModal}
+        handleClose={handleCloseToolTransactionModal}
+      />
+      <InventoryAuditComponent
+        userId={userId}
+        open={auditInstrumentModalOpen}
+        handleClose={handleCloseAuditInstrumentModalModal}
+      />
+
+      {/* Детальные модалки */}
       <InstrumentDetailsModal
         open={detailsModalOpen}
         handleClose={() => setDetailsModalOpen(false)}
         instruments={instruments}
       />
-       <ReturnedInWriteOffInstrumentDetailsModal
+      <ReturnedInWriteOffInstrumentDetailsModal
         open={returnedInwriteOffDetailsModalOpen}
         handleClose={() => setReturnedInWriteOffDetailsModalOpen(false)}
         writeOffInstruments={storageSummary}
       />
-       <IssuedInstrumentDetailsModal
+      <IssuedInstrumentDetailsModal
         open={issuedDetailsModalOpen}
         handleClose={() => setIssuedDetailsModalOpen(false)}
         writeOffInstruments={storageSummary}
       />
-       <WrittenOffInstrumentDetailsModal
+      <WrittenOffInstrumentDetailsModal
         open={writeOffDetailsModalOpen}
         handleClose={() => setWriteOffDetailsModalOpen(false)}
         writeOffInstruments={storageSummary}
@@ -456,4 +549,5 @@ function Home() {
     </div>
   );
 }
-export default withAuth(Home, [1,2]) 
+
+export default withAuth(Home, [1, 2]);
