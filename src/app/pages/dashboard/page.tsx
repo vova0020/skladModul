@@ -196,9 +196,11 @@ function Home() {
   const getInstruments = async () => {
     try {
       const response = await axios.get('/api/dashboardApi/getAllInstrument');
+      // @ts-ignore
       setInstruments(response.data.sort((a, b) => a.id - b.id));
 
       const response3 = await axios.get('/api/dashboardApi/getAllSpisanieIsse');
+      // @ts-ignore
       setStorageSummary(response3.data.sort((a, b) => a.id - b.id));
     } catch (error) {
       showSnackbar('Ошибка загрузки данных.', 'error');
@@ -216,11 +218,15 @@ function Home() {
     let writtenOffInstrumentsSumm = 0;
 
     for (const instrument of instruments) {
+      // @ts-ignore
       totalInstrumentsSumm += instrument.quantity;
     }
     for (const storageSumm of storageSummary) {
+      // @ts-ignore
       reparuedInstrumentsSumm += storageSumm.totalReturnedInWrittenOff;
+      // @ts-ignore
       issuedInstrumentsSumm += storageSumm.totalIssuedCeh;
+      // @ts-ignore
       writtenOffInstrumentsSumm += storageSumm.totalWrittenOff;
     }
 
@@ -520,6 +526,7 @@ function Home() {
         handleClose={handleCloseToolTransactionModal}
       />
       <InventoryAuditComponent
+      // @ts-ignore
         userId={userId}
         open={auditInstrumentModalOpen}
         handleClose={handleCloseAuditInstrumentModalModal}

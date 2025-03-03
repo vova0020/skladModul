@@ -74,6 +74,12 @@ const WrittenOffInstrumentDetailsModal: React.FC<WriteOffInstrumentDetailsModalP
 }) => {
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
 
+  const encodeFilePath = (filePath: string) => {
+    const parts = filePath.split('/');
+    const fileName = parts.pop(); // Последний элемент — имя файла
+    return `${parts.join('/')}/${encodeURIComponent(fileName || '')}`;
+  };
+
   return (
     <>
       <Modal open={open} onClose={handleClose}>
@@ -118,7 +124,7 @@ const WrittenOffInstrumentDetailsModal: React.FC<WriteOffInstrumentDetailsModalP
                               variant="contained"
                               size="small"
                               startIcon={<PictureAsPdfIcon />}
-                              onClick={() => setSelectedDrawing(item.instrumentDetails.drawing.filePath )}
+                              onClick={() => setSelectedDrawing(encodeFilePath(item.instrumentDetails.drawing.filePath) )}
                               sx={{ mr: 2, mt: 1 }}
                             >
                               Чертеж
