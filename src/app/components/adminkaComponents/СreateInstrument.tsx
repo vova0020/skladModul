@@ -1,6 +1,5 @@
 'use client';
 /* eslint-disable */
-// @ts-nocheck
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Typography,
@@ -18,7 +17,7 @@ import {
     Autocomplete,
     Input,
 } from '@mui/material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridColumnResizeParams } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -31,9 +30,9 @@ type Instrument = {
     id: number;
     name: string;
     quantity: number;
-    drawing?: { id: number; name: string; filePath: string }; // Связь с чертежом
-    toolCell?: { storageCells: { id: number; name: string }; quantity: number }[]; // Связь с ячейками хранения
-    machines?: { id: number; instrumentId: number; machine: { id: number; name: string } }[]; // Связь со станками
+    drawing?: { id: number; name: string; filePath: string };
+    toolCell?: { storageCells: { id: number; name: string }; quantity: number }[];
+    machines?: { id: number; instrumentId: number; machine: { id: number; name: string } }[];
 };
 
 type StorageCell = {
@@ -64,6 +63,8 @@ export default function CreateInstrument() {
     const [selectedMachines, setSelectedMachines] = useState<number[]>([]);
     const [file, setFile] = useState<File | null>(null);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    // Состояние для хранения изменённых ширин столбцов
+    const [columnWidths, setColumnWidths] = useState<{ [field: string]: number }>({});
 
     useEffect(() => {
         getInstruments();
@@ -72,9 +73,8 @@ export default function CreateInstrument() {
     useMemo(() => {
         const intervalId = setInterval(() => {
             getInstruments(); // Обновляем данные
-        }, 8000); // Обновляем каждые 8 секунд
+        }, 8000); // Каждые 8 секунд
 
-        // Очищаем интервал при размонтировании компонента
         return () => clearInterval(intervalId);
     }, []);
 
@@ -94,7 +94,7 @@ export default function CreateInstrument() {
                         : 'Без ячеек',
             }));
 
-            await setInstruments(instrumentsData.sort((a: Instrument, b: Instrument) => a.id - b.id));
+            setInstruments(instrumentsData.sort((a: Instrument, b: Instrument) => a.id - b.id));
             console.log(instruments);
 
             const response3 = await axios.get('/api/adminka/updateCell');
@@ -131,11 +131,8 @@ export default function CreateInstrument() {
     };
 
     const handleAddInstrument = async () => {
-        if (
-            !instrumentName.trim() ||
-            selectedMachines.length === 0 // Убрали проверку selectedStorageCells
-        ) {
-            showSnackbar('Название и станки не могут быть пустыми.', 'error'); // Обновили сообщение
+        if (!instrumentName.trim() || selectedMachines.length === 0) {
+            showSnackbar('Название и станки не могут быть пустыми.', 'error');
             return;
         }
 
@@ -209,29 +206,19 @@ export default function CreateInstrument() {
         }
     };
 
-    const columns: GridColDef[] = [
-        { field: 'id', headerName: 'ID', width: 20 },
-        { field: 'name', headerName: 'Название', width: 150 },
-        { field: 'quantity', headerName: 'Количество', width: 150 },
-        {
-            field: 'drawingName',
-            headerName: 'Чертеж',
-            width: 150,
-        },
-        {
-            field: 'storageCellNames',
-            headerName: 'Ячейки хранения',
-            width: 200,
-        },
-        {
-            field: 'machineNames',
-            headerName: 'Станки',
-            width: 150,
-        },
+    // Мемоизированное определение колонок с учетом сохраненных ширин
+    const columns: GridColDef[] = useMemo(() => [
+        { field: 'id', headerName: 'ID', width: columnWidths['id'] || 20 },
+        { field: 'name', headerName: 'Название', width: columnWidths['name'] || 150 },
+        { field: 'quantity', headerName: 'Количество', width: columnWidths['quantity'] || 150 },
+        { field: 'drawingName', headerName: 'Чертеж', width: columnWidths['drawingName'] || 150 },
+        { field: 'storageCellNames', headerName: 'Ячейки хранения', width: columnWidths['storageCellNames'] || 200 },
+        { field: 'machineNames', headerName: 'Станки', width: columnWidths['machineNames'] || 150 },
         {
             field: 'actions',
             headerName: 'Действия',
             sortable: false,
+            width: columnWidths['actions'] || 150,
             renderCell: (params) => (
                 <>
                     <IconButton
@@ -257,9 +244,8 @@ export default function CreateInstrument() {
                     </IconButton>
                 </>
             ),
-            width: 150,
         },
-    ];
+    ], [columnWidths]);
 
     const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
     const checkedIcon = <CheckBoxIcon fontSize="small" />;
@@ -286,11 +272,19 @@ export default function CreateInstrument() {
                     autoHeight={false}
                     localeText={ruRU.components.MuiDataGrid.defaultProps.localeText}
                     disableRowSelectionOnClick
+                    onColumnResize={(params: GridColumnResizeParams) => {
+                        setColumnWidths((prev) => ({
+                            ...prev,
+                            [params.colDef.field]: params.width,
+                        }));
+                    }}
                 />
             </Box>
 
             <Dialog open={openDialog} onClose={handleDialogClose} maxWidth="md" fullWidth>
-                <DialogTitle>{dialogAction === 'add' ? 'Добавить инструмент' : 'Редактировать инструмент'}</DialogTitle>
+                <DialogTitle>
+                    {dialogAction === 'add' ? 'Добавить инструмент' : 'Редактировать инструмент'}
+                </DialogTitle>
                 <DialogContent>
                     <TextField
                         label="Название инструмента"
@@ -317,7 +311,9 @@ export default function CreateInstrument() {
                         )}
                         onChange={(event, newValue) => {
                             const updatedSelection = newValue.map((cell) => {
-                                const existing = selectedStorageCells.find((selected) => selected.storageCellId === cell.id);
+                                const existing = selectedStorageCells.find(
+                                    (selected) => selected.storageCellId === cell.id
+                                );
                                 return {
                                     storageCellId: cell.id,
                                     quantity: existing ? existing.quantity : 0,
@@ -356,7 +352,7 @@ export default function CreateInstrument() {
                                     updatedCells[index].quantity = Number(e.target.value);
                                     setSelectedStorageCells(updatedCells);
                                 }}
-                                inputProps={{ min: 0 }} // Разрешаем нулевые значения
+                                inputProps={{ min: 0 }}
                             />
                         </Box>
                     ))}
@@ -410,7 +406,7 @@ export default function CreateInstrument() {
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
             >
                 <Alert
-                    // @ts-ignore
+                 // @ts-ignore
                     severity={snackbar.severity}
                     onClose={() => setSnackbar({ ...snackbar, open: false })}
                 >

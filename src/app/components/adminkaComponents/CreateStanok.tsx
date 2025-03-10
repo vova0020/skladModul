@@ -2,7 +2,7 @@
 /* eslint-disable */
 // @ts-nocheck
 // @ts-ignore
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Typography,
     Box,
@@ -42,20 +42,13 @@ export default function CreateSectors() {
     const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-    useEffect(() => {
-        getSectors();
+    // Функция для отображения уведомлений
+    const showSnackbar = useCallback((message: string, severity: 'success' | 'error') => {
+        setSnackbar({ open: true, message, severity });
     }, []);
 
-    useMemo(() => {
-        const intervalId = setInterval(() => {
-            getSectors(); // Обновляем данные
-        }, 8000); // Обновляем каждые 8 секунд
-
-        // Очищаем интервал при размонтировании компонента
-        return () => clearInterval(intervalId);
-    }, []);
-
-    const getSectors = async () => {
+    // Получение данных о станках и изделиях
+    const getSectors = useCallback(async () => {
         try {
             const response = await axios.get('/api/adminka/updateStanock');
             const stanockData = response.data.map((stan: any) => ({
@@ -65,7 +58,6 @@ export default function CreateSectors() {
                         ? stan.product.map((p: any) => p.product.name).join(', ')
                         : 'Без изделий',
             }));
-    
             setStanock(stanockData.sort((a: any, b: any) => a.id - b.id));
 
             const response3 = await axios.get('/api/adminka/updateProduct');
@@ -74,25 +66,37 @@ export default function CreateSectors() {
         } catch (error) {
             showSnackbar('Ошибка загрузки данных.', 'error');
         }
-    };
+    }, [showSnackbar]);
 
-    const showSnackbar = (message: string, severity: 'success' | 'error') => {
-        setSnackbar({ open: true, message, severity });
-    };
+    useEffect(() => {
+        getSectors();
+    }, [getSectors]);
 
-    const handleDialogClose = () => {
+    useEffect(() => {
+        console.log(selectedProducts);
+        console.log(product);
+    }, [selectedProducts, product]);
+
+    // Обновление данных каждые 8 секунд
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            getSectors(); // Обновляем данные
+        }, 8000);
+        return () => clearInterval(intervalId);
+    }, [getSectors]);
+
+    const handleDialogClose = useCallback(() => {
         setOpenDialog(false);
         setSectorName('');
         setSelectedProducts([]);
         setDialogAction(null);
-    };
+    }, []);
 
     const handleAddSector = async () => {
         if (!sectorName.trim() || selectedProducts.length === 0) {
             showSnackbar('Название и изделия не могут быть пустыми.', 'error');
             return;
         }
-
         try {
             await axios.post('/api/adminka/updateStanock', {
                 name: sectorName,
@@ -122,7 +126,7 @@ export default function CreateSectors() {
         }
     };
 
-    const handleDeleteSector = async (clickId: number) => {
+    const handleDeleteSector = useCallback(async (clickId: number) => {
         try {
             await axios.delete('/api/adminka/updateStanock', { data: { stanockId: clickId } });
             showSnackbar('Станок удалён!', 'success');
@@ -130,9 +134,10 @@ export default function CreateSectors() {
         } catch {
             showSnackbar('Ошибка при удалении станка.', 'error');
         }
-    };
+    }, [getSectors, showSnackbar]);
 
-    const columns: GridColDef[] = [
+    // Мемоизированное определение колонок, чтобы их объект не пересоздавался при обновлении данных
+    const columns: GridColDef[] = useMemo(() => [
         { field: 'id', headerName: 'ID', width: 20 },
         { field: 'name', headerName: 'Название', width: 150 },
         {
@@ -151,7 +156,8 @@ export default function CreateSectors() {
                             setSelectedSector(params.row);
                             setDialogAction('edit');
                             setSectorName(params.row.name);
-                            setSelectedProducts(params.row.product?.map((p: any) => p.id) || []);
+                            // Используем правильное поле для id изделий
+                            setSelectedProducts(params.row.product?.map((p: any) => p.product.id) || []);
                             setOpenDialog(true);
                         }}
                     >
@@ -164,7 +170,7 @@ export default function CreateSectors() {
             ),
             width: 150,
         },
-    ];
+    ], [handleDeleteSector]);
 
     const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
     const checkedIcon = <CheckBoxIcon fontSize="small" />;
@@ -194,11 +200,15 @@ export default function CreateSectors() {
                 />
             </Box>
 
-            <Dialog open={openDialog} onClose={handleDialogClose}
+            <Dialog
+                open={openDialog}
+                onClose={handleDialogClose}
                 maxWidth="md" // Увеличиваем ширину диалога
                 fullWidth // Растягиваем диалог на всю доступную ширину
             >
-                <DialogTitle>{dialogAction === 'add' ? 'Добавить станок' : 'Редактировать станок'}</DialogTitle>
+                <DialogTitle>
+                    {dialogAction === 'add' ? 'Добавить станок' : 'Редактировать станок'}
+                </DialogTitle>
                 <DialogContent>
                     <TextField
                         label="Название станка"
@@ -235,7 +245,10 @@ export default function CreateSectors() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDialogClose}>Отмена</Button>
-                    <Button onClick={dialogAction === 'add' ? handleAddSector : handleEditSector} variant="contained">
+                    <Button
+                        onClick={dialogAction === 'add' ? handleAddSector : handleEditSector}
+                        variant="contained"
+                    >
                         Сохранить
                     </Button>
                 </DialogActions>
