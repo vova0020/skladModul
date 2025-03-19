@@ -1,4 +1,4 @@
-import React, {  useState } from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   Box,
@@ -29,6 +29,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import SearchIcon from '@mui/icons-material/Search';
+import ExcelJS from 'exceljs';
 
 const modalStyle = {
   position: 'absolute' as const,
@@ -46,7 +47,6 @@ const modalStyle = {
 };
 
 // Интерфейсы, соответствующие структуре данных с сервера
-
 interface StorageCells {
   id: number;
   name: string;
@@ -74,9 +74,9 @@ interface MachineEntry {
 
 interface Instrument {
   id: number;
-  name: string; // например, "5"
+  name: string;
   quantity: number;
-  machines: MachineEntry[]; // массив, где используется первый элемент для отображения названия станка
+  machines: MachineEntry[];
   toolCell: ToolCell[];
   drawing?: Drawing;
 }
@@ -96,10 +96,7 @@ const InstrumentDetailsModal: React.FC<InstrumentDetailsModalProps> = ({
   const [searchMachine, setSearchMachine] = useState('');
   const [searchTool, setSearchTool] = useState('');
 
-
-
-
-  // Функция для извлечения названия машины из массива machines
+  // Извлекаем название машины из массива machines
   const getMachineName = (instrument: Instrument) => {
     return instrument.machines && instrument.machines.length > 0
       ? instrument.machines[0].machine.name
@@ -115,10 +112,62 @@ const InstrumentDetailsModal: React.FC<InstrumentDetailsModalProps> = ({
     );
   });
 
+  // Кодирование пути к файлу
   const encodeFilePath = (filePath: string) => {
     const parts = filePath.split('/');
-    const fileName = parts.pop(); // Последний элемент — имя файла
+    const fileName = parts.pop();
     return `${parts.join('/')}/${encodeURIComponent(fileName || '')}`;
+  };
+
+  // Функция для экспорта данных в Excel с использованием ExcelJS
+  const handleExportExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Инструменты');
+
+    // Определяем колонки и заголовки
+    worksheet.columns = [
+      { header: 'Инструмент', key: 'instrument', width: 35 },
+      { header: 'Общее количество', key: 'quantity', width: 25 },
+      { header: 'Станок', key: 'machine', width: 20 },
+      { header: 'Ячейки', key: 'cells', width: 38 },
+      { header: 'Чертеж', key: 'drawing', width: 10 },
+    ];
+
+    // Оформление заголовков: жирный шрифт, цвет фона и выравнивание
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4CAF50' }, // синий фон
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    // Заполнение данными
+    filteredInstruments.forEach((instrument) => {
+      worksheet.addRow({
+        instrument: instrument.name,
+        quantity: instrument.quantity,
+        machine: getMachineName(instrument),
+        cells: instrument.toolCell
+          .map((cell) => `Ячейка ${cell.storageCells.name} (кол-во: ${cell.quantity})`)
+          .join('; '),
+        drawing: instrument.drawing?.filePath ? 'Да' : 'Нет',
+      });
+    });
+
+    // Генерация файла и запуск скачивания
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Инструменты.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -139,19 +188,42 @@ const InstrumentDetailsModal: React.FC<InstrumentDetailsModalProps> = ({
               <CloseIcon fontSize="large" />
             </IconButton>
             <Stack spacing={3}>
-              {/* Заголовок модального окна */}
-              <Stack spacing={1}>
-                <Typography
-                  variant="h4"
-                  sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold', color: 'primary.main' }}
-                >
-                  <InventoryIcon sx={{ mr: 1, fontSize: 40 }} />
-                  Инструменты
-                </Typography>
-                <Typography variant="subtitle1" color="text.secondary">
-                  Детализированная информация по инструментам
-                </Typography>
+              {/* Заголовок модального окна и кнопка экспорта */}
+              <Stack spacing={1} direction="row" alignItems="center" justifyContent="space-between">
+                <Stack spacing={1}>
+                  <Typography
+                    variant="h4"
+                    sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold', color: 'primary.main' }}
+                  >
+                    <InventoryIcon sx={{ mr: 1, fontSize: 40 }} />
+                    Инструменты
+                  </Typography>
+                  <Typography variant="subtitle1" color="text.secondary">
+                    Детализированная информация по инструментам
+                  </Typography>
+                </Stack>
+                
               </Stack>
+ <Grid container alignItems="left" justifyContent="space-between">
+              <Button
+                variant="contained"
+                color="success"
+                onClick={handleExportExcel}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  boxShadow: 3,
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1,
+                  fontSize: '0.875rem', // Уменьшаем размер шрифта
+                  whiteSpace: 'nowrap' // Запрещаем перенос текста
+                }}
+              >
+                Экспорт в Excel
+              </Button>
+
+            </Grid>
 
               {/* Фильтры */}
               <Grid container spacing={2}>

@@ -20,10 +20,12 @@ import {
   List,
   ListItem,
   ListItemText,
+  Grid,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import ExcelJS from 'exceljs';
 
 const modalStyle = {
   position: 'absolute' as const,
@@ -41,16 +43,16 @@ const modalStyle = {
 };
 
 interface Drawing {
-    id: number;
-    filePath: string;
-    name: string;
-  }
-  interface InstrumentDetails {
-    drawing: Drawing | null;
-    id: number;
-    name: string;
-    quantity: number;
-  }
+  id: number;
+  filePath: string;
+  name: string;
+}
+interface InstrumentDetails {
+  drawing: Drawing | null;
+  id: number;
+  name: string;
+  quantity: number;
+}
 
 export interface WriteOffInstrument {
   id: number;
@@ -80,84 +82,137 @@ const WrittenOffInstrumentDetailsModal: React.FC<WriteOffInstrumentDetailsModalP
     return `${parts.join('/')}/${encodeURIComponent(fileName || '')}`;
   };
 
+  // Функция для экспорта данных в Excel с оформлением
+  const handleExportExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Списанные инструменты');
+
+    // Определяем колонки и заголовки с нужной шириной
+    worksheet.columns = [
+      { header: 'Инструмент', key: 'instrument', width: 35 },
+      { header: 'Общее количество', key: 'quantity', width: 25 },
+      { header: 'Списано', key: 'written', width: 15 },
+      { header: 'Чертеж', key: 'drawing', width: 10 },
+    ];
+
+    // Оформление заголовков – зелёный фон, белый жирный шрифт и центрирование
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4CAF50' }, // зелёный фон
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    // Заполнение данными – только инструменты, у которых totalWrittenOff > 0
+    writeOffInstruments
+      .filter((item) => item.totalWrittenOff > 0)
+      .forEach((item) => {
+        worksheet.addRow({
+          instrument: item.instrumentDetails.name,
+          quantity: item.instrumentDetails.quantity,
+          written: item.totalWrittenOff,
+          drawing: item.instrumentDetails.drawing ? 'Да' : 'Нет',
+        });
+      });
+
+    // Генерация файла и запуск скачивания
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Списанные_инструменты.xlsx';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <Modal open={open} onClose={handleClose}>
         <Box sx={modalStyle}>
+          {/* Кнопка закрытия модального окна */}
           <IconButton
             onClick={handleClose}
-            sx={{ position: 'absolute', right: 16, top: 16, color: 'grey.600' }}
+            sx={{ position: 'absolute', right: 16, top: 16, color: 'grey.600', zIndex: 10 }}
           >
             <CloseIcon fontSize="large" />
           </IconButton>
           <Stack spacing={3}>
-            {/* Заголовок окна */}
-            <Typography
-              variant="h4"
-              sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold', color: 'primary.main' }}
-            >
-              <InventoryIcon sx={{ mr: 1, fontSize: 40 }} />
-              Списанные инструменты
-            </Typography>
+            {/* Заголовок окна и кнопка экспорта */}
+            <Stack spacing={1}>
+              <Typography
+                variant="h4"
+                sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold', color: 'primary.main' }}
+              >
+                <InventoryIcon sx={{ mr: 1, fontSize: 40 }} />
+                Списанные инструменты
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={handleExportExcel}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 'bold',
+                    boxShadow: 3,
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1.5,
+                  }}
+                >
+                  Экспорт в Excel
+                </Button>
+              </Box>
+            </Stack>
 
             {/* Список инструментов */}
             {writeOffInstruments.length > 0 ? (
               <Stack spacing={3}>
-                {writeOffInstruments.filter((item) => item.totalWrittenOff > 0).map((item) => (
-                  <Paper key={item.id} elevation={3} sx={{ borderRadius: 2 }}>
-                    <Card variant="outlined" sx={{ border: 'none', boxShadow: 'none' }}>
-                      <CardHeader
-                        avatar={<InventoryIcon sx={{ fontSize: 40, color: 'primary.main' }} />}
-                        title={
-                          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                            {item.instrumentDetails.name}
-                          </Typography>
-                        }
-                        // subheader={
-                        //   <Typography variant="body2" color="text.secondary">
-                        //     Количество: {item.instrumentDetails.quantity} шт.
-                        //   </Typography>
-                        // }
-                        action={
+                {writeOffInstruments
+                  .filter((item) => item.totalWrittenOff > 0)
+                  .map((item) => (
+                    <Paper key={item.id} elevation={3} sx={{ borderRadius: 2 }}>
+                      <Card variant="outlined" sx={{ border: 'none', boxShadow: 'none' }}>
+                        <CardHeader
+                          avatar={<InventoryIcon sx={{ fontSize: 40, color: 'primary.main' }} />}
+                          title={
+                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                              {item.instrumentDetails.name}
+                            </Typography>
+                          }
+                          action={
                             item.instrumentDetails.drawing && (
-                            <Button
-                              variant="contained"
-                              size="small"
-                              startIcon={<PictureAsPdfIcon />}
-                              onClick={() => setSelectedDrawing(encodeFilePath(item.instrumentDetails.drawing.filePath) )}
-                              sx={{ mr: 2, mt: 1 }}
-                            >
-                              Чертеж
-                            </Button>
-                          )
-                        }
-                      />
-                      <Divider />
-                      <CardContent>
-                        <List>
-                          {/* <ListItem>
-                            <ListItemText
-                              primary="Выдано в цех"
-                              secondary={item.totalIssuedCeh}
-                            />
-                          </ListItem> */}
-                          {/* <ListItem>
-                            <ListItemText
-                              primary={`На складе для списания:  ${item.totalReturnedInWrittenOff}.шт`}
-                              secondary={item.totalReturnedInWrittenOff}
-                            />
-                          </ListItem> */}
-                          <ListItem>
-                            <ListItemText
-                              primary={`Списано:  ${item.totalWrittenOff}.шт`}
-                            //   secondary={item.totalWrittenOff}
-                            />
-                          </ListItem>
-                        </List>
-                      </CardContent>
-                    </Card>
-                  </Paper>
-                ))}
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<PictureAsPdfIcon />}
+                                onClick={() =>
+                                  setSelectedDrawing(encodeFilePath(item.instrumentDetails.drawing.filePath))
+                                }
+                                sx={{ mr: 2, mt: 1 }}
+                              >
+                                Чертеж
+                              </Button>
+                            )
+                          }
+                        />
+                        <Divider />
+                        <CardContent>
+                          <List>
+                            <ListItem>
+                              <ListItemText primary={`Списано: ${item.totalWrittenOff} шт.`} />
+                            </ListItem>
+                          </List>
+                        </CardContent>
+                      </Card>
+                    </Paper>
+                  ))}
               </Stack>
             ) : (
               <Typography variant="body1" align="center" sx={{ mt: 3, color: 'text.secondary' }}>
@@ -169,12 +224,7 @@ const WrittenOffInstrumentDetailsModal: React.FC<WriteOffInstrumentDetailsModalP
       </Modal>
 
       {/* Диалог для просмотра чертежа */}
-      <Dialog
-        open={!!selectedDrawing}
-        onClose={() => setSelectedDrawing(null)}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={!!selectedDrawing} onClose={() => setSelectedDrawing(null)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ m: 0, p: 2 }}>
           Просмотр чертежа
           <IconButton

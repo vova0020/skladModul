@@ -25,6 +25,7 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import axios from 'axios';
 import { ruRU } from '@mui/x-data-grid/locales/ruRU';
+import ExcelJS from 'exceljs';
 
 type Instrument = {
     id: number;
@@ -33,6 +34,10 @@ type Instrument = {
     drawing?: { id: number; name: string; filePath: string };
     toolCell?: { storageCells: { id: number; name: string }; quantity: number }[];
     machines?: { id: number; instrumentId: number; machine: { id: number; name: string } }[];
+    // Дополнительные поля, сформированные на сервере:
+    drawingName?: string;
+    storageCellNames?: string;
+    machineNames?: string;
 };
 
 type StorageCell = {
@@ -95,15 +100,12 @@ export default function CreateInstrument() {
             }));
 
             setInstruments(instrumentsData.sort((a: Instrument, b: Instrument) => a.id - b.id));
-            console.log(instruments);
 
             const response3 = await axios.get('/api/adminka/updateCell');
-            // @ts-ignore
-            setStorageCells(response3.data.sort((a, b) => a.id - b.id));
+            setStorageCells(response3.data.sort((a: any, b: any) => a.id - b.id));
 
             const response4 = await axios.get('/api/adminka/updateStanock');
-            // @ts-ignore
-            setMachines(response4.data.sort((a, b) => a.id - b.id));
+            setMachines(response4.data.sort((a: any, b: any) => a.id - b.id));
         } catch (error) {
             showSnackbar('Ошибка загрузки данных.', 'error');
         }
@@ -195,8 +197,6 @@ export default function CreateInstrument() {
     };
 
     const handleDeleteInstrument = async (clickId: number) => {
-        console.log(clickId);
-
         try {
             await axios.delete('/api/adminka/updateInstrument', { data: { instrumentId: clickId } });
             showSnackbar('Инструмент удалён!', 'success');
@@ -206,7 +206,7 @@ export default function CreateInstrument() {
         }
     };
 
-    // Мемоизированное определение колонок с учетом сохраненных ширин
+    // Мемоизированное определение колонок с учетом сохранённых ширин
     const columns: GridColDef[] = useMemo(() => [
         { field: 'id', headerName: 'ID', width: columnWidths['id'] || 20 },
         { field: 'name', headerName: 'Название', width: columnWidths['name'] || 150 },
@@ -250,21 +250,86 @@ export default function CreateInstrument() {
     const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
     const checkedIcon = <CheckBoxIcon fontSize="small" />;
 
+    // Функция экспорта в Excel
+    const handleExportExcel = async () => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Инструменты');
+
+        worksheet.columns = [
+            { header: 'ID', key: 'id', width: 10 },
+            { header: 'Название', key: 'name', width: 30 },
+            { header: 'Количество', key: 'quantity', width: 15 },
+            { header: 'Чертеж', key: 'drawing', width: 20 },
+            { header: 'Ячейки хранения', key: 'storageCells', width: 40 },
+            { header: 'Станки', key: 'machines', width: 30 },
+        ];
+
+        // Оформление заголовков
+        worksheet.getRow(1).eachCell((cell) => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF4CAF50' },
+            };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        instruments.forEach((inst) => {
+            worksheet.addRow({
+                id: inst.id,
+                name: inst.name,
+                quantity: inst.quantity,
+                drawing: inst.drawing ? inst.drawing.name : 'без чертежа',
+                storageCells: inst.storageCellNames,
+                machines: inst.machineNames,
+            });
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Инструменты.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <Box sx={{ height: '97%', p: 4, backgroundColor: '#fff', borderRadius: 2, boxShadow: 2 }}>
             <Typography variant="h5" gutterBottom>
                 Управление инструментами
             </Typography>
-            <Button
-                startIcon={<AddIcon />}
-                variant="contained"
-                onClick={() => {
-                    setDialogAction('add');
-                    setOpenDialog(true);
-                }}
-            >
-                Добавить инструмент
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <Button
+                    startIcon={<AddIcon />}
+                    variant="contained"
+                    onClick={() => {
+                        setDialogAction('add');
+                        setOpenDialog(true);
+                    }}
+                >
+                    Добавить инструмент
+                </Button>
+                <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleExportExcel}
+                    sx={{
+                        textTransform: 'none',
+                        fontWeight: 'bold',
+                        boxShadow: 3,
+                        borderRadius: 2,
+                        px: 3,
+                        py: 1.5,
+                    }}
+                >
+                    Выгрузить в Excel
+                </Button>
+            </Box>
             <Box sx={{ height: '70%', mt: 3 }}>
                 <DataGrid
                     rows={instruments}
@@ -406,7 +471,7 @@ export default function CreateInstrument() {
                 onClose={() => setSnackbar({ ...snackbar, open: false })}
             >
                 <Alert
-                 // @ts-ignore
+                //@ts-ignore
                     severity={snackbar.severity}
                     onClose={() => setSnackbar({ ...snackbar, open: false })}
                 >
