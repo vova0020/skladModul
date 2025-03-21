@@ -74,7 +74,7 @@ const IssuedInstrumentDetailsModal: React.FC<WriteOffInstrumentDetailsModalProps
   writeOffInstruments,
 }) => {
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
-console.log(writeOffInstruments);
+// console.log(writeOffInstruments);
 
   const encodeFilePath = (filePath: string) => {
     const parts = filePath.split('/');

@@ -26,16 +26,24 @@ import axios from 'axios';
 interface ToolModalProps {
   open: boolean;
   handleClose: (refresh?: boolean) => void;
-  userId: number
+  userId: number;
 }
 
 interface AuditItem {
+  auditId: number;
+  auditItemId: number;
   instrumentId: number;
   instrumentName: string;
   systemQuantity: number;
-  actualQuantity: number;
+  expectedQuantity: number;
+  /**
+   * Здесь храним как строку, чтобы отличать пустое поле (user ничего не вводил)
+   * от "0" (user ввёл именно 0).
+   */
+  actualQuantity: string;
   notes: string;
   isChanged: boolean;
+  cells: Array<{ id: number; name: string; quantity: number }>;
 }
 
 interface AuditData {
@@ -43,7 +51,7 @@ interface AuditData {
   status: 'in_progress' | 'completed' | 'draft';
 }
 
-const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) => {
+const InventoryAuditComponent = ({ userId, open, handleClose }: ToolModalProps) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [auditItems, setAuditItems] = useState<AuditItem[]>([]);
@@ -86,22 +94,36 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
     try {
       setIsLoading(true);
       const { data } = await axios.get('/api/audit/getInventoryAudit');
-      
-      const items = data.auditItems.map((auditItems: any) => ({
-        auditId: auditItems.auditId,
-        auditItemId: auditItems.id,
-        instrumentId: auditItems.instrument.id,
-        instrumentName: auditItems.instrument.name,
-        systemQuantity: auditItems.instrument.quantity,
-        actualQuantity: auditItems.actualQuantity,
-        notes: auditItems.notes || '',
-        isChanged: false,
-      }));
 
-      
+      const items = data.auditItems
+        .map((auditItem: any) => {
+          // Если сервер возвращает actualQuantity = null/undefined,
+          // то отображаем это как пустую строку, иначе приводим к строке.
+          let actualQuantityValue = auditItem.actualQuantity;
+          if (actualQuantityValue == null) {
+            actualQuantityValue = '';
+          } else {
+            actualQuantityValue = String(actualQuantityValue);
+          }
 
-      // Сортировка по возрастанию id
-      items.sort((a, b) => a.auditItemId - b.auditItemId);
+          return {
+            auditId: auditItem.auditId,
+            auditItemId: auditItem.id,
+            instrumentId: auditItem.instrument.id,
+            instrumentName: auditItem.instrument.name,
+            systemQuantity: auditItem.instrument.quantity,
+            expectedQuantity: auditItem.expectedQuantity ?? auditItem.instrument.quantity,
+            actualQuantity: actualQuantityValue,
+            notes: auditItem.notes || '',
+            isChanged: false,
+            cells: auditItem.instrument.toolCell.map((cell: any) => ({
+              id: cell.storageCells.id,
+              name: cell.storageCells.name,
+              quantity: cell.quantity,
+            })),
+          };
+        })
+        .sort((a, b) => a.auditItemId - b.auditItemId);
 
       setAuditItems(items);
       calculateProgress(items);
@@ -110,30 +132,22 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
     } finally {
       setIsLoading(false);
     }
-};
-
-
-  useEffect(()=>{
-    console.log(inventoryAuditData);  
-    
-  },[inventoryAuditData])
+  };
 
   const calculateProgress = (items: AuditItem[]) => {
-    const filled = items.filter(item => item.actualQuantity > 0).length;
+    // Считаем заполненными только те элементы, у которых actualQuantity не пустая строка
+    const filled = items.filter(item => item.actualQuantity !== '').length;
     setProgress(Math.round((filled / items.length) * 100));
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
   };
 
   const handleStartNewAudit = async () => {
     try {
       setIsSubmitting(true);
-      await axios.post('/api/audit/getInventoryAudit', {userId});
-      const { data } = await axios.get('/api/audit/getInventoryAudit');
-      setInventoryAuditData(data);
-
+      await axios.post('/api/audit/getInventoryAudit', { userId });
       await fetchInstruments();
       setConfirmationDialogOpen(false);
     } catch (error) {
@@ -149,43 +163,56 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
   };
 
   const handleQuantityChange = (instrumentId: number, value: string) => {
+    // Если пользователь стёр всё из поля, храним пустую строку
+    // Иначе парсим и не даём уйти ниже 0
+    let newValue = value;
+    if (value === '') {
+      newValue = '';
+    } else {
+      const parsed = parseInt(value, 10);
+      newValue = String(Math.max(0, isNaN(parsed) ? 0 : parsed));
+    }
+
     const newItems = auditItems.map(item =>
       item.instrumentId === instrumentId
         ? {
             ...item,
-            actualQuantity: Math.max(0, parseInt(value) || 0),
+            actualQuantity: newValue,
             isChanged: true,
           }
         : item
     );
+
     setAuditItems(newItems);
     calculateProgress(newItems);
   };
 
   const handleSaveDraft = async () => {
     try {
-        setIsSubmitting(true);
+      setIsSubmitting(true);
+      const changedItems = auditItems.filter(item => item.isChanged);
 
-        const changedItems = auditItems.filter(item => item.isChanged);
+      if (changedItems.length === 0) {
+        showSnackbar('Нет изменений для сохранения', 'info');
+        return;
+      }
 
-        if (changedItems.length === 0) {
-            showSnackbar('Нет изменений для сохранения', 'info');
-            return; // Прерываем выполнение функции
-        }
-
-        await axios.put('/api/audit/draftAudit', changedItems);
-        showSnackbar('Черновик сверки сохранен', 'success');
+      // При сохранении (PUT) вы уже передаёте auditItems как есть.
+      // Серверу, вероятно, придёт "0" или пустая строка.
+      // Важно, чтобы сервер корректно обрабатывал пустую строку как null (или что-то аналогичное).
+      await axios.put('/api/audit/draftAudit', changedItems);
+      showSnackbar('Черновик сверки сохранен', 'success');
     } catch (error) {
-        showSnackbar('Ошибка сохранения черновика', 'error');
+      showSnackbar('Ошибка сохранения черновика', 'error');
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
-};
-
+  };
 
   const handleCompleteAudit = async () => {
     try {
       setIsSubmitting(true);
+      // Аналогично, при завершении
       await axios.put('/api/audit/completeAudit', { auditItems });
       showSnackbar('Сверка успешно завершена!', 'success');
       handleClose(true);
@@ -196,10 +223,9 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
     }
   };
 
-  const getDiscrepancy = (item: AuditItem) => item.actualQuantity - item.systemQuantity;
-
   return (
     <Dialog
+      fullScreen={isMobile}
       open={open}
       onClose={() => handleClose()}
       maxWidth="md"
@@ -224,11 +250,7 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
             Текущая сверка не найдена. Хотите начать новую?
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-            <Button
-              variant="outlined"
-              onClick={handleConfirmationClose}
-              disabled={isSubmitting}
-            >
+            <Button variant="outlined" onClick={handleConfirmationClose} disabled={isSubmitting}>
               Отмена
             </Button>
             <Button
@@ -236,48 +258,59 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
               color="primary"
               onClick={handleStartNewAudit}
               disabled={isSubmitting}
-              startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+              startIcon={isSubmitting && <CircularProgress size={20} />}
             >
               Начать
             </Button>
           </Box>
         </Box>
       ) : (
-        <Box sx={{ p: { xs: 2, sm: 3 }, position: 'relative' }}>
-          <IconButton
-            onClick={() => handleClose()}
-            sx={{ position: 'absolute', right: 16, top: 16 }}
-          >
+        <Box sx={{ p: { xs: 1, sm: 3 }, position: 'relative' }}>
+          <IconButton onClick={() => handleClose()} sx={{ position: 'absolute', right: 8, top: 8 }}>
             <Close />
           </IconButton>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-            <Typography variant="h5" fontWeight="600">
-              Инвентаризация инструментов № {inventoryAuditData?.id}
+          <Box sx={{ mb: 3, px: { xs: 1, sm: 0 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Typography variant="h5" fontWeight="600">
+                Инвентаризация №{inventoryAuditData?.id}
+              </Typography>
+              <Tooltip title="Обновить список">
+                <IconButton onClick={fetchInstruments} size="small">
+                  <Refresh fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            <LinearProgress
+              variant="determinate"
+              value={progress}
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: theme.palette.grey[200],
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 4,
+                },
+              }}
+            />
+            <Typography variant="body2" color="textSecondary" sx={{ mt: 1, textAlign: 'right' }}>
+              Заполнено: {progress}%
             </Typography>
-            <Tooltip title="Обновить список">
-              <IconButton onClick={fetchInstruments} size="small">
-                <Refresh fontSize="small" />
-              </IconButton>
-            </Tooltip>
           </Box>
 
-          <LinearProgress
-            variant="determinate"
-            value={progress}
-            sx={{ mb: 2, height: 8, borderRadius: 4 }}
-          />
-
-          <Box sx={{
-            maxHeight: isMobile ? '60vh' : '70vh',
-            overflowY: 'auto',
-            pr: 1,
-            '&::-webkit-scrollbar': { width: 8 },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.action.hover,
-              borderRadius: 4
-            }
-          }}>
+          <Box
+            sx={{
+              height: isMobile ? 'calc(100vh - 240px)' : '65vh',
+              overflowY: 'auto',
+              pr: 1,
+              '&::-webkit-scrollbar': { width: 6 },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.action.hover,
+                borderRadius: 3,
+              },
+            }}
+          >
             <List disablePadding>
               {auditItems.map((item) => (
                 <ListItem
@@ -287,35 +320,111 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
                     mb: 2,
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: 2,
-                    bgcolor: item.actualQuantity !=0 ? theme.palette.success.light + '10' : 'transparent'
+                    // Подсветка, если строка заполнена (actualQuantity !== '')
+                    bgcolor: item.actualQuantity !== '' ? theme.palette.success.light + '10' : 'transparent',
                   }}
                 >
-                  <Grid container spacing={2} sx={{ p: 2 }}>
-                    <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="subtitle1" fontWeight={500}>
-                        {item.instrumentName}
-                      </Typography>
+                  <Grid container spacing={2} sx={{ p: 2, alignItems: 'center' }}>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                          {item.instrumentName}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Ожидаемо:
+                        </Typography>
+                        <Box
+                          sx={{
+                            px: 1.5,
+                            py: 0.5,
+                            bgcolor: theme.palette.success.light,
+                            borderRadius: 1,
+                            color: 'white',
+                            fontWeight: 500,
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          {item.expectedQuantity}
+                        </Box>
+                      </Box>
+
+                      {item.cells.length > 0 && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Распределение:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {item.cells.map((cell) => (
+                              <Box
+                                key={cell.id}
+                                sx={{
+                                  px: 1.2,
+                                  py: 0.3,
+                                  border: `1px solid ${theme.palette.divider}`,
+                                  borderRadius: 2,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  fontSize: '0.75rem',
+                                }}
+                              >
+                                <span>{cell.name}</span>
+                                <span style={{ fontWeight: 600 }}>({cell.quantity})</span>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
                     </Grid>
 
-                    <Grid item xs={12} sm={5}>
+                    <Grid item xs={12} sm={4}>
                       <TextField
                         fullWidth
                         type="number"
                         label="Фактическое количество"
-                        value={item.actualQuantity === 0 ? '' : item.actualQuantity}
+                        // В value теперь лежит пустая строка, если пользователь ещё не вводил значение
+                        value={item.actualQuantity}
                         onChange={(e) => handleQuantityChange(item.instrumentId, e.target.value)}
+                        inputProps={{
+                          min: 0,
+                          style: {
+                            textAlign: 'center',
+                            fontSize: isMobile ? '1rem' : '1.1rem',
+                            padding: isMobile ? '12px 8px' : '16px',
+                          },
+                        }}
+                        sx={{
+                          '& .MuiInputBase-input': {
+                            fontWeight: 500,
+                            color:
+                              item.actualQuantity !== '' &&
+                              Number(item.actualQuantity) === item.systemQuantity
+                                ? theme.palette.text.primary
+                                : theme.palette.warning.dark,
+                          },
+                        }}
                       />
                     </Grid>
 
-                    <Grid item xs={12} sm={3} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Grid item xs={12} sm={4}>
                       <TextField
                         fullWidth
                         label="Примечание"
                         size="small"
                         value={item.notes}
+                        multiline
+                        maxRows={3}
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            alignItems: 'flex-start',
+                          },
+                        }}
                         onChange={(e) =>
-                          setAuditItems(items =>
-                            items.map(i =>
+                          setAuditItems((items) =>
+                            items.map((i) =>
                               i.instrumentId === item.instrumentId
                                 ? { ...i, notes: e.target.value, isChanged: true }
                                 : i
@@ -330,43 +439,48 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
             </List>
           </Box>
 
-          <Box sx={{
-            mt: 3,
-            display: 'flex',
-            gap: 2,
-            flexDirection: isMobile ? 'column' : 'row',
-            '& button': { flex: 1 },
-            position: 'sticky',
-            bottom: 0,
-            backgroundColor: theme.palette.background.paper,
-            zIndex: 1,
-            p: 2,
-            borderTop: `1px solid ${theme.palette.divider}`,
-          }}>
+          <Box
+            sx={{
+              mt: 2,
+              display: 'flex',
+              gap: 2,
+              flexDirection: isMobile ? 'column' : 'row',
+              position: 'sticky',
+              bottom: 0,
+              backgroundColor: theme.palette.background.paper,
+              zIndex: 1,
+              p: 2,
+              borderTop: `1px solid ${theme.palette.divider}`,
+            }}
+          >
             <Button
               variant="outlined"
-              startIcon={<Save />}
+              startIcon={!isMobile && <Save />}
               onClick={handleSaveDraft}
               disabled={isSubmitting}
+              fullWidth={isMobile}
             >
-              Сохранить черновик
+              {isMobile ? 'Черновик' : 'Сохранить черновик'}
             </Button>
 
             <Button
               variant="contained"
               color="success"
-              startIcon={<CheckCircle />}
+              startIcon={!isMobile && <CheckCircle />}
               onClick={handleCompleteAudit}
               disabled={isSubmitting || progress < 100}
+              fullWidth={isMobile}
               sx={{
                 background: `linear-gradient(135deg, ${theme.palette.success.main} 30%, ${theme.palette.success.dark} 90%)`,
-                '&:disabled': { background: theme.palette.action.disabledBackground }
+                '&:disabled': { background: theme.palette.action.disabledBackground },
               }}
             >
               {isSubmitting ? (
                 <CircularProgress size={24} sx={{ color: 'white' }} />
+              ) : isMobile ? (
+                <>Готово ({progress}%)</>
               ) : (
-                `Завершить (${progress}%)`
+                <>Завершить ({progress}%)</>
               )}
             </Button>
           </Box>
@@ -376,7 +490,7 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
-        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert
@@ -384,7 +498,9 @@ const InventoryAuditComponent = ({userId, open, handleClose }: ToolModalProps) =
           icon={snackbar.severity === 'error' ? <Info /> : undefined}
           sx={{
             boxShadow: theme.shadows[3],
-            alignItems: 'center'
+            alignItems: 'center',
+            width: '100%',
+            maxWidth: isMobile ? '90vw' : '400px',
           }}
         >
           {snackbar.message}

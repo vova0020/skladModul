@@ -989,43 +989,58 @@ export default class prismaInteraction {
                     type,
                     quantity,
                     userId,
-                    reason,
+                    reason, 
                     transactionType,
                     createdAt: new Date(),
                 },
             });
+        console.log(data);
+        
 
             // Обновляем агрегированные данные
             // await this.updateSummaryWriteOffRepair(instrumentId, type, quantity);
 
             // Обновляем количество инструментов в ячейках хранения и удаляем связь, если количество равно нулю
             for (const cell of cells) {
-                const { cellId: storageCellId, quantity: cellQuantity } = cell;
-
+                // Извлекаем cellId из cell, чтобы использовать его как storageCellsId
+                const { cellId, quantity: cellQuantity } = cell;
+              
                 const toolCell = await prisma.toolCell.findUnique({
-                    where: {
-                        instrumentId_storageCellsId: {
-                            instrumentId,
-                            storageCellsId: storageCellId,
-                        },
+                  where: {
+                    instrumentId_storageCellsId: {
+                      instrumentId,
+                      storageCellsId: cellId,
                     },
+                  },
                 });
-
+              
                 if (toolCell) {
-                    const newQuantity = toolCell.quantity + cellQuantity;
-                    await prisma.toolCell.update({
-                        where: { id: toolCell.id },
-                        data: { quantity: newQuantity },
+                  const newQuantity = toolCell.quantity + cellQuantity;
+                  if (newQuantity === 0) {
+                    // Если итоговое количество равно 0, удаляем запись
+                    await prisma.toolCell.delete({
+                      where: { id: toolCell.id },
                     });
-
-                    // Если количество равно нулю, удаляем запись
-                    if (newQuantity === 0) {
-                        await prisma.toolCell.delete({
-                            where: { id: toolCell.id },
-                        });
-                    }
+                  } else {
+                    await prisma.toolCell.update({
+                      where: { id: toolCell.id },
+                      data: { quantity: newQuantity },
+                    });
+                  }
+                } else {
+                  // Если записи не существует, создаём новую, только если количество больше 0
+                  if (cellQuantity > 0) {
+                    await prisma.toolCell.create({
+                      data: {
+                        instrumentId,
+                        storageCellsId: cellId,
+                        quantity: cellQuantity,
+                      },
+                    });
+                  }
                 }
-            }
+              }
+              
 
             // Уменьшаем общее количество инструмента в таблице Instrument с помощью decrement
             await prisma.instrument.update({
@@ -1325,7 +1340,21 @@ export default class prismaInteraction {
                                     id: true, // Только id инструмента
                                     name: true,
                                     quantity: true,
-                                }
+                                    toolCell: {
+                                        select: {
+                                            id: true,
+                                            storageCellsId: true,
+                                            quantity: true,
+                                            storageCells: {
+                                                select: {
+                                                    id: true,
+                                                    name: true
+                                                }
+                                            }
+                                        }
+                                    },
+                                },
+                               
                             } // Включаем данные о связанных инструментах
                         }
                     }
@@ -1378,67 +1407,63 @@ export default class prismaInteraction {
     }
     async PutInventoryAudit(data) {
         try {
-            if (!Array.isArray(data)) {
-                throw new Error('Ожидался массив данных');
-            }
-
-            // Обновляем все записи параллельно и возвращаем обновленные элементы
-            const updatedItems = await Promise.all(
-                data.map(items =>
-                    prisma.auditItem.update({
-                        where: { id: items.auditItemId },
-                        data: {
-                            actualQuantity: items.actualQuantity,
-                            notes: items.notes || null
-                        },
-                    })
-                )
-            );
-
-            return updatedItems; // 🔹 Теперь функция возвращает обновленные записи
-
+          if (!Array.isArray(data)) {
+            throw new Error('Ожидался массив данных');
+          }
+      
+          const updatedItems = await Promise.all(
+            data.map(item =>
+              prisma.auditItem.update({
+                where: { id: item.auditItemId },
+                data: {
+                  actualQuantity: item.actualQuantity === '' ? null : parseInt(item.actualQuantity, 10),
+                  notes: item.notes || null,
+                },
+              })
+            )
+          );
+      
+          return updatedItems;
         } catch (error) {
-            console.error('Ошибка при обновлении записей сверки:', error);
-            throw error;
+          console.error('Ошибка при обновлении записей сверки:', error);
+          throw error;
         }
-    }
-    async CompleteInventoryAudit(data) {
+      }
+      
+      async CompleteInventoryAudit(data) {
         try {
             console.log(data);
-
-
-            // Обновляем все записи параллельно
+    
             const updatedItems = await Promise.all(
-                data.auditItems.map(items =>
-                    prisma.auditItem.update({
-                        where: { id: items.auditItemId },
+                data.auditItems.map(item => {
+                    const actualQuantityNumber = Number(item.actualQuantity);
+                    return prisma.auditItem.update({
+                        where: { id: item.auditItemId },
                         data: {
-                            actualQuantity: items.actualQuantity,
-                            expectedQuantity: items.systemQuantity,
-                            discrepancy: items.systemQuantity - items.actualQuantity,
-                            notes: items.notes || null
+                            actualQuantity: actualQuantityNumber,
+                            expectedQuantity: item.systemQuantity,
+                            discrepancy: item.systemQuantity - actualQuantityNumber,
+                            notes: item.notes || null,
                         },
-                    })
-                )
+                    });
+                })
             );
-
-            // Обновляем запись сверки после обновления элементов
+    
             const updatedAudit = await prisma.inventoryAudit.update({
-                where: { id: data.auditItems[0].auditId },  // Берем auditId из первого элемента
+                where: { id: data.auditItems[0].auditId },
                 data: {
                     completedAt: new Date(),
                     status: 'completed',
                 },
             });
-
-            return { updatedItems, updatedAudit }; // Возвращаем обновленные записи
-
+    
+            return { updatedItems, updatedAudit };
         } catch (error) {
             console.error('Ошибка при обновлении записей сверки:', error);
             throw error;
         }
     }
-
+    
 
 
     // Отправка инструмента в токарку

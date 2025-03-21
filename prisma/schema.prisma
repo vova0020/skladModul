@@ -165,7 +165,7 @@ model AuditItem {
   instrumentId     Int // Ссылка на инструмент
   instrument       Instrument     @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
   expectedQuantity Int? // Ожидаемое количество инструментов (из системы)
-  actualQuantity   Int            @default(0) // Фактическое количество инструментов
+  actualQuantity   Int?           // Фактическое количество инструментов
   discrepancy      Int? // Разница между ожидаемым и фактическим количеством (вычисляется на сервере)
   notes            String? // Заметки или комментарии по конкретному инструменту
 }
