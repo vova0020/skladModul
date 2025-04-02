@@ -26,7 +26,7 @@ async function main() {
     });
 
     if (!existingAdmin) {
-        const adminPassword = await bcrypt.hash('Admin311', 10);
+        const adminPassword = await bcrypt.hash('Admin654!', 10);
 
         await prisma.user.create({
             data: {
@@ -54,3 +54,5 @@ main()
         await prisma.$disconnect();
         process.exit(1);
     });
+    $2b$10$UBgFAhOflROymuYJ78e/ie2mpfh7OxdglG2o416OiWyiV5lo/Yh2W   // Новый пароль
+    $2b$10$gl4Csg4YXUoWZOnrfz8t8.buxGO7vS7/7nQi4oesN46LAWezkUI4W   // старый пароль
