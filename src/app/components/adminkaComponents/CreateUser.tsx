@@ -7,6 +7,7 @@ import { Typography, Box, TextField, Button, IconButton, Snackbar, Alert, Dialog
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import VpnKeyIcon from '@mui/icons-material/VpnKey'; // Иконка для смены пароля
 import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 import Register from './Register';
@@ -26,6 +27,12 @@ export default function CreateUsers() {
     const [stanockName, setStanockName] = useState([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [redisterModal, setRedisterModal] = useState(false);
+    
+    // Состояния для смены пароля
+    const [changePasswordDialog, setChangePasswordDialog] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [selectedUser, setSelectedUser] = useState(null);
 
     useEffect(() => {
         getSectors();
@@ -63,23 +70,51 @@ export default function CreateUsers() {
         setDialogAction(null);
     };
 
-    // const handleAddSector = async () => {
-    //     if (!sectorName.trim()) {
-    //         showSnackbar('Название не может быть пустым.', 'error');
-    //         return;
-    //     }
-    //     try {
-    //         await axios.post('/api/adminka/updateUsers', { name: sectorName });
-    //         showSnackbar('Станок успешно добавлен!', 'success');
-    //         getSectors();
-    //         handleDialogClose();
-    //     } catch {
-    //         showSnackbar('Ошибка при добавлении станка.', 'error');
-    //     }
-    // };
-    useEffect(() => {
+    // Обработчик открытия диалога смены пароля
+    // @ts-ignore
+    const handlePasswordDialogOpen = (user) => {
+        setSelectedUser(user);
+        setNewPassword('');
+        setConfirmPassword('');
+        setChangePasswordDialog(true);
+    };
 
-    }, [])
+    // Обработчик закрытия диалога смены пароля
+    const handlePasswordDialogClose = () => {
+        setChangePasswordDialog(false);
+        setSelectedUser(null);
+        setNewPassword('');
+        setConfirmPassword('');
+    };
+
+    // Функция смены пароля
+    const handleChangePassword = async () => {
+        if (!selectedUser) return;
+        
+        // Проверка на совпадение паролей
+        if (newPassword !== confirmPassword) {
+            showSnackbar('Пароли не совпадают!', 'error');
+            return;
+        }
+        
+        // Проверка минимальной длины пароля
+        if (newPassword.length < 6) {
+            showSnackbar('Пароль должен содержать минимум 6 символов!', 'error');
+            return;
+        }
+
+        try {
+            await axios.put('/api/adminka/updateUsers', { 
+                // @ts-ignore
+                userId: selectedUser.id, 
+                newPassword: newPassword 
+            });
+            showSnackbar('Пароль успешно изменён!', 'success');
+            handlePasswordDialogClose();
+        } catch (error) {
+            showSnackbar('Ошибка при смене пароля.', 'error');
+        }
+    };
 
     const handleEditSector = async () => {
         // if (!selectedSector || !sectorName.trim()) return;
@@ -144,10 +179,10 @@ export default function CreateUsers() {
             sortable: false,
             renderCell: (params) => (
                 <>
-                    {/* <IconButton onClick={() => { setSelectedSector(params.row); setDialogAction('edit'); setOpenDialog(true); }}>
-                        <EditIcon />
-                    </IconButton> */}
-                    <IconButton onClick={() => { setSelectedSector(params.row); handleDeleteSector(params.row.id); }}>
+                    <IconButton onClick={() => handlePasswordDialogOpen(params.row)} title="Изменить пароль">
+                        <VpnKeyIcon />
+                    </IconButton>
+                    <IconButton onClick={() => { setSelectedSector(params.row); handleDeleteSector(params.row.id); }} title="Удалить пользователя">
                         <DeleteIcon />
                     </IconButton>
                 </>
@@ -234,7 +269,41 @@ export default function CreateUsers() {
                             Сохранить
                         </Button>
                     </DialogActions>
-                  
+                </Dialog>
+
+                {/* Диалог смены пароля */}
+                <Dialog open={changePasswordDialog} onClose={handlePasswordDialogClose}>
+                    <DialogTitle>
+                    {/*  @ts-ignore */}
+                        Изменить пароль{selectedUser ? ` для ${selectedUser.firstName} ${selectedUser.lastName}` : ''}
+                    </DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Новый пароль"
+                            type="password"
+                            fullWidth
+                            variant="outlined"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                        <TextField
+                            margin="dense"
+                            label="Подтвердите пароль"
+                            type="password"
+                            fullWidth
+                            variant="outlined"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handlePasswordDialogClose}>Отмена</Button>
+                        <Button onClick={handleChangePassword} variant="contained" color="primary">
+                            Сохранить
+                        </Button>
+                    </DialogActions>
                 </Dialog>
 
                 <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar({ ...snackbar, open: false })}>
